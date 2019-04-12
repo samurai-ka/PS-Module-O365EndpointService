@@ -6,11 +6,11 @@ This is a very early release. I haven't added this module to the PowerShell Gall
 ## Calling the REST service
 To use this module simply copy it somewhere on your disk and import it directly:
 
-> Import-Module O365EndpointFunctions.psm1
+        Import-Module O365EndpointFunctions.psm1
 
 After you have imported the module you can then call the REST service. This will return to you as a collection of uri you can process in powershell directly. You must enter the name of your Office 365 tenant
 
-> Invoke-O365EnpointService -tenantName [Name of your tenant]
+        Invoke-O365EnpointService -tenantName [Name of your tenant]
 
 ### Parameter
 
@@ -25,4 +25,13 @@ After you have imported the module you can then call the REST service. This will
 * IPv6
 
   This switch will return the IPv6 addresses as well. As default only IPv4 will be returned.
-  
+
+## Samples
+
+Return the complete list of all Uri including the IPv6 addresses
+        
+        Invoke-O365EnpointService -tenantName [Name of your tenant] -ForceLatest -IPv6 | Format-Table -AutoSize
+
+Return only the IP addresses for Exchange
+
+        Invoke-O365EnpointService -tenantName [Name of your tenant] -ForceLatest | where{($_.serviceArea -eq "Exchange") -and ($_.protocol -eq "ip")}| Format-Table -AutoSize

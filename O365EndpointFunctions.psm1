@@ -59,15 +59,21 @@ function Invoke-O365EnpointService {
 
     # path where client ID and latest version number will be stored
     #$datapath = $Env:TEMP + "\endpoints_clientid_latestversion.txt"
-    $datapath = "$Env:LOCALAPPDATA\pwsh\O365EndpointFunctions\Invoke-O365EnpointService\endpoints_clientid_latestversion.txt"
+    $datafile = "endpoints_clientid_latestversion.txt"
+    $dataDir = $Env:LOCALAPPDATA + "\pwsh\O365EndpointFunctions\Invoke-O365EnpointService\"
+    $datapath = $dataDir + $datafile
 
     # fetch client ID and version if data file exists; otherwise create new file
-    if (Test-Path $datapath) {
+    if (Test-Path -Path $datapath) {
         $clientRequestContent = Get-Content $datapath
         $clientRequestId = $clientRequestContent[0]
         $lastVersion = $clientRequestContent[1]
     }
     else {
+        if (!(Test-Path -Path $dataDir)) {
+            New-Item -ItemType directory -Path $dataDir
+        }
+
         $clientRequestId = [GUID]::NewGuid().Guid
         $lastVersion = "0000000000"
         @($clientRequestId, $lastVersion) | Out-File $datapath
