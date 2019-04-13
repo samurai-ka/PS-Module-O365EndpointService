@@ -35,3 +35,11 @@ Return the complete list of all Uri including the IPv6 addresses
 Return only the IP addresses for Exchange
 
         Invoke-O365EnpointService -tenantName [Name of your tenant] -ForceLatest | where{($_.serviceArea -eq "Exchange") -and ($_.protocol -eq "ip")}| Format-Table -AutoSize
+
+# Exporting a Proxy Pacfile
+
+You can use this module to create an Proxy Pacfile, even it isn't advised to use a proxy with the Office 365 Endpoints at all.
+
+Use the following cmdlet to export a proxy pacfile. In this example you first get the endpoints and filter the result to select the Urls and the category Optimize or Allow only. These urls are piped to and select only unique entries which is then exported. The result is piped to the shell or you could pipe it into a Out-File cmdlet to save the result.
+
+        Invoke-O365EnpointService -tenantName YourTenantName -ForceLatest | where{($_.Protocol -eq "Url") -and (($_.Category -eq "Optimize") -or ($_.category -eq "Allow"))} | select uri -Unique | Export-O365ProxyPacFile

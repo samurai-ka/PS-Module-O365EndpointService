@@ -224,3 +224,75 @@ Function Test-UrlEndpoint  {
     }
 }
 #endregion Test Function 
+
+function Export-O365ProxyPacFile {
+    [cmdletbinding()]
+    param (
+        # Parameter help description
+        [parameter(ValueFromPipelineByPropertyName)]
+        [Alias('Service','Area')]
+        [string]$ServiceArea,
+
+        # The service area that this is part of: Common, Exchange, SharePoint, or Skype.
+        [parameter(ValueFromPipelineByPropertyName)]
+        [Alias('ServiceName','Name','DisplayName','AreaName')]
+        [string]$ServiceAreaDisplayName,
+
+        [parameter(ValueFromPipelineByPropertyName)]
+        [string]$Protocol,
+
+        [parameter(ValueFromPipelineByPropertyName)]
+        [Alias('Url','Endpoint')]
+        [string]$Uri,
+    
+        # TCP ports for the endpoint set. All ports elements are formatted as a comma-separated list of ports or
+        # port ranges separated by a dash character (-). Ports apply to all IP addresses and all URLs in that endpoint set for that category. Omitted if blank.
+        [parameter(ValueFromPipelineByPropertyName)]
+        [Alias('Tcp')]
+        [string]$TcpPort,
+    
+        # UDP ports for the IP address ranges in this endpoint set. Omitted if blank.
+        [parameter(ValueFromPipelineByPropertyName)]
+        [Alias('Udp')]
+        [string]$UdpPort,
+    
+        # The connectivity category for the endpoint set. Valid values are Optimize, Allow, and Default. Required.
+        [parameter(ValueFromPipelineByPropertyName)]
+        [ValidateSet('Default','Allow','Optimize')]
+        [string]$Category,
+    
+        # True or False if this endpoint set is routed over ExpressRoute.
+        [parameter(ValueFromPipelineByPropertyName)]
+        [bool]$ExpressRoute,
+    
+        # True if this endpoint set is required to have connectivity for Office 365 to be supported. Omitted if false.
+        [parameter(ValueFromPipelineByPropertyName)]
+        [bool]$Required,
+    
+        # For optional endpoints, this text describes Office 365 functionality that will be missing if IP addresses or URLs
+        # in this endpoint set cannot be accessed at the network layer. Omitted if blank.
+        [parameter(ValueFromPipelineByPropertyName)]
+        [string]$Notes
+    )
+    Begin {
+        '// Office 365 entries'
+        '// If the hostname matches, send direct.'
+        'if (isPlainHostName(host) ||' | Out-Default
+    }
+    Process {
+        'shExpMatch(host, "{0}") ||' -f $Uri | Out-Default
+        # "Service Area: {0}" -f $ServiceArea | Write-Host
+        # "Service Area Displayname: {0}" -f $ServiceAreaDisplayName | Write-Host
+        # "Protocol: {0}" -f $Protocol | Write-Host
+        # "URI: {0}" -f $Uri | Write-Host
+        # "TCP: {0}" -f $TcpPort | Write-Host
+        # "UDP: {0}" -f $UdpPort | Write-Host
+        # "Category: {0}" -f $Category | Write-Host
+        # "ExpressRoute: {0}" -f $ExpressRoute | Write-Host
+        # "Required : {0}" -f $Required | Write-Host
+        # "Notes : {0}" -f $Notes | Write-Host
+    }
+    End {
+        'return "DIRECT";' | Out-Default
+    }
+}
