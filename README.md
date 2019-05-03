@@ -43,3 +43,11 @@ You can use this module to create an Proxy Pacfile, even it isn't advised to use
 Use the following cmdlet to export a proxy pacfile. In this example you first get the endpoints and filter the result to select the Urls and the category Optimize or Allow only. These urls are piped to and select only unique entries which is then exported. The result is piped to the shell or you could pipe it into a Out-File cmdlet to save the result.
 
         Invoke-O365EnpointService -tenantName YourTenantName -ForceLatest | where{($_.Protocol -eq "Url") -and (($_.Category -eq "Optimize") -or ($_.category -eq "Allow"))} | select uri -Unique | Export-O365ProxyPacFile
+
+The cmdlet does not filter double entries. If you do not want the uri repeated you must filter them with
+
+        select uri -Unique
+
+You can add the notes returned by the Invoke-O365EndpointService cmdlet with switch Comments. Just add the switch at the end of the cmdlet like this:
+
+        Export-O365ProxyPacFile -Comments
