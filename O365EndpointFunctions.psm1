@@ -37,7 +37,7 @@ class EndpointSet {
 }
 #endregion Class definitions
 
-function Invoke-O365EnpointService {
+function Invoke-O365EndpointService {
     param(
         [cmdletbinding()]
 
