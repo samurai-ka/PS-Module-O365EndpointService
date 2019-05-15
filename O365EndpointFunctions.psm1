@@ -225,6 +225,7 @@ Function Test-UrlEndpoint  {
 }
 #endregion Test Function 
 
+#region Export-O365ProxyPacFile function
 function Export-O365ProxyPacFile {
     [cmdletbinding()]
     param (
@@ -323,3 +324,139 @@ function Export-O365ProxyPacFile {
         'return "DIRECT";' | Out-Default
     }
 }
+#endregion Export-O365ProxyPacFile function
+
+#region Merge-O365EndpointService function
+function Merge-O365EndpointService {
+    [CmdletBinding()]
+    param (
+        # Parameter help description
+        [parameter( Position = 0,
+                    Mandatory = $false,
+                    ValueFromPipelineByPropertyName)]
+        [Alias('Service','Area')]
+        [string]$ServiceArea,
+
+        # The service area that this is part of: Common, Exchange, SharePoint, or Skype.
+        [parameter( Position = 1,
+                    Mandatory = $false,
+                    ValueFromPipelineByPropertyName,
+                    ParameterSetName = "Comments")]
+        [Alias('ServiceName','Name','DisplayName','AreaName')]
+        [string]$ServiceAreaDisplayName,
+
+        [parameter( Position = 2,
+                    Mandatory = $false,
+                    ValueFromPipelineByPropertyName)]
+        [string]$Protocol,
+
+        [parameter( Position = 3,
+                    Mandatory = $true,
+                    ValueFromPipelineByPropertyName)]
+        [Alias('Url','Endpoint')]
+        [string]$Uri,
+    
+        # TCP ports for the endpoint set. All ports elements are formatted as a comma-separated list of ports or
+        # port ranges separated by a dash character (-). Ports apply to all IP addresses and all URLs in that endpoint set for that category. Omitted if blank.
+        [parameter( Position = 4,
+                    Mandatory = $false,
+                    ValueFromPipelineByPropertyName)]
+        [Alias('Tcp')]
+        [string]$TcpPort,
+    
+        # UDP ports for the IP address ranges in this endpoint set. Omitted if blank.
+        [parameter( Position = 5,
+                    Mandatory = $false,
+                    ValueFromPipelineByPropertyName)]
+        [Alias('Udp')]
+        [string]$UdpPort,
+    
+        # The connectivity category for the endpoint set. Valid values are Optimize, Allow, and Default. Required.
+        [parameter( Position = 6,
+                    Mandatory = $false,
+                    ValueFromPipelineByPropertyName,
+                    ParameterSetName = "Comments")]
+        [ValidateSet('Default','Allow','Optimize')]
+        [string]$Category,
+    
+        # True or False if this endpoint set is routed over ExpressRoute.
+        [parameter( Position = 7,
+                    Mandatory = $false,
+                    ValueFromPipelineByPropertyName)]
+        [bool]$ExpressRoute,
+    
+        # True if this endpoint set is required to have connectivity for Office 365 to be supported. Omitted if false.
+        [parameter( Position = 8,
+                    Mandatory = $false,
+                    ValueFromPipelineByPropertyName)]
+        [bool]$Required,
+    
+        # For optional endpoints, this text describes Office 365 functionality that will be missing if IP addresses or URLs
+        # in this endpoint set cannot be accessed at the network layer. Omitted if blank.
+        [parameter( Position = 9,
+                    Mandatory = $false,
+                    ValueFromPipelineByPropertyName,
+                    ParameterSetName = "Comments")]
+        [string]$Notes,
+
+        # Specifies a path to one or more locations.
+        [Parameter(Mandatory=$true,
+                   Position=10,
+                   ValueFromPipeline=$false,
+                   ValueFromPipelineByPropertyName=$false,
+                   HelpMessage="Path to one or more locations.")]
+        [Alias("PSPath")]
+        [ValidateNotNullOrEmpty()]
+        [string[]]
+        $Path
+    )
+    
+    begin {
+        [System.Collections.ArrayList]$endpoints = @()
+    }
+    
+    process {
+        $endpoint = New-Object EndpointSet
+
+        $endpoint.serviceArea               = $ServiceArea
+        $endpoint.serviceAreaDisplayName    = $ServiceAreaDisplayName
+        $endpoint.protocol                  = $Protocol
+        $endpoint.uri                       = $Uri
+        $endpoint.tcpPort                   = $TcpPort
+        $endpoint.udpPort                   = $UdpPort
+        $endpoint.category                  = $Category
+        $endpoint.expressRoute              = $ExpressRoute
+        $endpoint.required                  = $Required
+        $endpoint.notes                     = $Notes
+        
+        $endpoints.Add($endpoint) > $null
+    }
+    
+    end {
+        foreach ($PathElement in $Path) {
+            if ([IO.Path]::GetExtension($PathElement) -eq '.json') {
+                $endpointsJSON = Get-Content $PathElement | ConvertFrom-Json    
+            
+                foreach ($endpointJSON in $endpointsJSON) {
+                    $endpoint = New-Object EndpointSet
+
+                    $endpoint.serviceArea               = $endpointJSON.serviceArea
+                    $endpoint.serviceAreaDisplayName    = $endpointJSON.serviceAreaDisplayName
+                    $endpoint.protocol                  = $endpointJSON.protocol
+                    $endpoint.uri                       = $endpointJSON.uri
+                    $endpoint.tcpPort                   = $endpointJSON.tcpPort
+                    $endpoint.udpPort                   = $endpointJSON.udpPort
+                    $endpoint.category                  = $endpointJSON.category
+                    $endpoint.expressRoute              = $endpointJSON.expressRoute
+                    $endpoint.required                  = $endpointJSON.required
+                    $endpoint.notes                     = $endpointJSON.notes
+            
+                    $endpoints.Add($endpoint) > $null
+                }
+            }
+        }
+
+        return $endpoints
+    }
+}
+#endregion Merge-O365EndpointService function

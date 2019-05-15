@@ -30,11 +30,11 @@ After you have imported the module you can then call the REST service. This will
 
 Return the complete list of all Uri including the IPv6 addresses
         
-        Invoke-O365EndpointService -tenantName [Name of your tenant] -ForceLatest -IPv6 | Format-Table -AutoSize
+        Invoke-O365EndpointService -tenantName [YourTenantName] -ForceLatest -IPv6 | Format-Table -AutoSize
 
 Return only the IP addresses for Exchange
 
-        Invoke-O365EndpointService -tenantName [Name of your tenant] -ForceLatest | where{($_.serviceArea -eq "Exchange") -and ($_.protocol -eq "ip")}| Format-Table -AutoSize
+        Invoke-O365EndpointService -tenantName [YourTenantName] -ForceLatest | where{($_.serviceArea -eq "Exchange") -and ($_.protocol -eq "ip")} | Format-Table -AutoSize
 
 # Exporting a Proxy Pacfile
 
@@ -42,7 +42,7 @@ You can use this module to create an Proxy Pacfile, even it isn't advised to use
 
 Use the following cmdlet to export a proxy pacfile. In this example you first get the endpoints and filter the result to select the Urls and the category Optimize or Allow only. These urls are piped to and select only unique entries which is then exported. The result is piped to the shell or you could pipe it into a Out-File cmdlet to save the result.
 
-        Invoke-O365EndpointService -tenantName YourTenantName -ForceLatest | where{($_.Protocol -eq "Url") -and (($_.Category -eq "Optimize") -or ($_.category -eq "Allow"))} | select uri -Unique | Export-O365ProxyPacFile
+        Invoke-O365EndpointService -tenantName [YourTenantName] -ForceLatest | where{($_.Protocol -eq "Url") -and (($_.Category -eq "Optimize") -or ($_.category -eq "Allow"))} | select uri -Unique | Export-O365ProxyPacFile
 
 The cmdlet does not filter double entries. If you do not want the uri repeated you must filter them with
 
@@ -51,3 +51,15 @@ The cmdlet does not filter double entries. If you do not want the uri repeated y
 You can add the notes returned by the Invoke-O365EndpointService cmdlet with switch Comments. Just add the switch at the end of the cmdlet like this:
 
         Export-O365ProxyPacFile -Comments
+
+# Merging endpoints
+
+There a plenty of other url and IP-addresses you might want to configure but are not returned from the Microsoft Rest API e.g. Azure Endpoints. An other use case are missing endpoints. In these cases you can merge your list of endpoints with the endpoints returned from the Rest API using the cmdlet
+
+        Merge-O365EndpointService
+
+You can define your endpoints as one or more JSON files. These files can than be merged into a single list.
+
+        Invoke-O365EndpointService -tenantName [YourTenantName] -ForceLatest | Merge-O365EndpointService -Path @(".\ExampleEndpoints1.json",".\ExampleEndpoints2.json") | Format-Table -AutoSize
+
+There is no JSON schema yet. So take care when creating your list.
