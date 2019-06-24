@@ -1,0 +1,9 @@
+C:\Sources\github\samurai-ka\PS-Module-O365EndpointService\O365ServiceEndpoint\bin\Debug\netstandard2.0\O365ServiceEndpoint.deps.json
+C:\Sources\github\samurai-ka\PS-Module-O365EndpointService\O365ServiceEndpoint\bin\Debug\netstandard2.0\O365ServiceEndpoint.dll
+C:\Sources\github\samurai-ka\PS-Module-O365EndpointService\O365ServiceEndpoint\bin\Debug\netstandard2.0\O365ServiceEndpoint.pdb
+C:\Sources\github\samurai-ka\PS-Module-O365EndpointService\O365ServiceEndpoint\obj\Debug\netstandard2.0\O365ServiceEndpoint.csprojAssemblyReference.cache
+C:\Sources\github\samurai-ka\PS-Module-O365EndpointService\O365ServiceEndpoint\obj\Debug\netstandard2.0\O365ServiceEndpoint.csproj.CoreCompileInputs.cache
+C:\Sources\github\samurai-ka\PS-Module-O365EndpointService\O365ServiceEndpoint\obj\Debug\netstandard2.0\O365ServiceEndpoint.AssemblyInfoInputs.cache
+C:\Sources\github\samurai-ka\PS-Module-O365EndpointService\O365ServiceEndpoint\obj\Debug\netstandard2.0\O365ServiceEndpoint.AssemblyInfo.cs
+C:\Sources\github\samurai-ka\PS-Module-O365EndpointService\O365ServiceEndpoint\obj\Debug\netstandard2.0\O365ServiceEndpoint.dll
+C:\Sources\github\samurai-ka\PS-Module-O365EndpointService\O365ServiceEndpoint\obj\Debug\netstandard2.0\O365ServiceEndpoint.pdb
