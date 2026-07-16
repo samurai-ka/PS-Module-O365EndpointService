@@ -210,7 +210,7 @@ Function Test-UrlEndpoint  {
         [Parameter( Mandatory=$false
                 )
         ]
-        [int32]$tcpPort = "80"
+        [int32]$tcpPort = 80
 
 )
   
