@@ -219,7 +219,13 @@ Function Test-UrlEndpoint  {
             "Url is a wildcard and will be skipped" | Write-Host
         }
         else {
-            Test-NetConnection -ComputerName $uri -Port $tcpPort -InformationLevel Detailed
+            # Test-NetConnection -ComputerName $uri -Port $tcpPort -InformationLevel Detailed
+
+            $client = [System.Net.Sockets.TcpClient]::new()
+            $success = $client.ConnectAsync($Uri, $TcpPort).Wait(2000)
+            $client.Close()
+            $success | Write-Host
+
         }
     }
 }
