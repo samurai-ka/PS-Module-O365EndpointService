@@ -38,8 +38,8 @@ class EndpointSet {
 #endregion Class definitions
 
 function Invoke-O365EndpointService {
+    [cmdletbinding()]
     param(
-        [cmdletbinding()]
 
         # The tenant name will be used to replace placeholders in the url returned from the service
         [Parameter(Mandatory=$true)]
