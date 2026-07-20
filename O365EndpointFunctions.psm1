@@ -87,9 +87,6 @@ function Invoke-O365EndpointService {
     if (($webserviceEndpointVersion.latest -gt $lastVersion) -or ($ForceLatest.IsPresent)) {
     #    Write-EventLog -LogName "Application" -Source $eventSource -EventId $eventNewEndpoints -EntryType Information -Message "New version of Office 365 worldwide commercial service instance endpoints detected" -Category 1
 
-        # write the new version number to the data file
-        @($clientRequestId, $webserviceEndpointVersion.latest) | Out-File $datapath
-
         # Use the NoIPv6 switch to create a string for the rest call
         if($IPv6.IsPresent){
             $NoIPv6 = "false"
@@ -189,6 +186,11 @@ function Invoke-O365EndpointService {
                 }
             }
         }
+
+        # only cache the new version number after the endpoints were fetched successfully,
+        # otherwise a failed endpoints call would leave the cache marked "up-to-date"
+        @($clientRequestId, $webserviceEndpointVersion.latest) | Out-File $datapath
+
         return $endpoints
     }
     else {
@@ -315,9 +317,8 @@ function Export-O365ProxyPacFile {
         [Switch]$Comments
     )
     Begin {
-        '// Office 365 entries'
-        '// If the hostname matches, send direct.'
-        'if (isPlainHostName(host) ||' | Out-Default
+        # collect the entries so the last match line can be terminated correctly
+        $entries = [System.Collections.Generic.List[object]]::new()
     }
     Process {
         if ($Comments -eq $true) {
@@ -326,10 +327,26 @@ function Export-O365ProxyPacFile {
             $CommentString = ""
         }
 
-        'shExpMatch(host, "{0}") ||{1}' -f $Uri,$CommentString | Out-Default
+        $entries.Add([pscustomobject]@{ Uri = $Uri; Comment = $CommentString })
     }
     End {
-        'return "DIRECT";' | Out-Default
+        # emit to the pipeline (not Out-Default) so the result can be redirected to a .pac file
+        '// Office 365 entries'
+        '// If the hostname matches, send direct.'
+
+        if ($entries.Count -eq 0) {
+            'if (isPlainHostName(host))'
+        }
+        else {
+            'if (isPlainHostName(host) ||'
+            for ($i = 0; $i -lt $entries.Count; $i++) {
+                # the last match closes the if() with ')'; all others chain with '||'
+                if ($i -eq ($entries.Count - 1)) { $terminator = ')' } else { $terminator = ' ||' }
+                'shExpMatch(host, "{0}"){1}{2}' -f $entries[$i].Uri, $terminator, $entries[$i].Comment
+            }
+        }
+
+        'return "DIRECT";'
     }
 }
 #endregion Export-O365ProxyPacFile function
