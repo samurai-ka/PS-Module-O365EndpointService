@@ -491,6 +491,77 @@ function Export-O365ProxyPacFile {
 
 #region Merge-O365EndpointService function
 function Merge-O365EndpointService {
+    <#
+    .SYNOPSIS
+        Merges endpoint objects from the pipeline with endpoints stored in JSON file(s).
+
+    .DESCRIPTION
+        Combines two sources of EndpointSet objects into a single collection:
+
+          - Endpoints piped in (typically from Invoke-O365EndpointService), and
+          - Endpoints previously saved to one or more JSON files, given via -Path.
+
+        Each piped object is converted to an EndpointSet in the process block; after the
+        pipeline is drained, every .json file in -Path is read (Get-Content | ConvertFrom-Json),
+        its entries are converted to EndpointSet objects, and the full combined collection is
+        returned. Files whose extension is not .json are ignored.
+
+        No de-duplication is performed - if the same endpoint exists both in the pipeline and
+        in a file, it appears twice in the result.
+
+    .PARAMETER ServiceArea
+        The service area the endpoint belongs to (Common, Exchange, SharePoint, or Skype).
+
+    .PARAMETER ServiceAreaDisplayName
+        The friendly service area name.
+
+    .PARAMETER Protocol
+        The endpoint protocol (for example "url" or "ip").
+
+    .PARAMETER Uri
+        The host/URL or IP range for the endpoint. Mandatory for pipeline input.
+
+    .PARAMETER TcpPort
+        TCP port(s) for the endpoint set.
+
+    .PARAMETER UdpPort
+        UDP port(s) for the endpoint set.
+
+    .PARAMETER Category
+        The connectivity category (Optimize, Allow, or Default).
+
+    .PARAMETER ExpressRoute
+        Whether the endpoint set is routed over ExpressRoute.
+
+    .PARAMETER Required
+        Whether connectivity to the endpoint set is required for Office 365.
+
+    .PARAMETER Notes
+        Free-text notes describing functionality lost if the endpoint is unreachable.
+
+    .PARAMETER Path
+        One or more paths to JSON files containing previously exported endpoints. Only files
+        with a .json extension are read; other paths are ignored. Mandatory.
+
+    .OUTPUTS
+        EndpointSet. The combined collection of endpoints from the pipeline and the file(s).
+
+    .EXAMPLE
+        Invoke-O365EndpointService -tenantName 'contoso' |
+            Merge-O365EndpointService -Path .\custom-endpoints.json
+
+        Merges the current Office 365 endpoints with a custom set stored in a JSON file.
+
+    .EXAMPLE
+        Invoke-O365EndpointService -tenantName 'contoso' |
+            Merge-O365EndpointService -Path .\extra1.json, .\extra2.json |
+            ConvertTo-Json | Out-File .\merged-endpoints.json
+
+        Merges live endpoints with two JSON files and saves the combined result.
+
+    .LINK
+        Invoke-O365EndpointService
+    #>
     [CmdletBinding()]
     param (
         # Parameter help description
