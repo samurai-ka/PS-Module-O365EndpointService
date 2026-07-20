@@ -15,9 +15,22 @@ Using the changelog schema https://keepachangelog.com/en/0.3.0/
 * Version cache was written before the endpoints were fetched, so a failed download left the cache marked up-to-date (cache poisoning)
 
 ### Cmdlet: Export-O365ProxyPacFile
+#### Added
+* Comment-based help (Get-Help support)
+
 #### Fixed
 * Output now goes to the pipeline instead of the host, so the result can be redirected to a .pac file
 * Generated a valid PAC if-block (the last match now closes the if() instead of leaving a trailing ||)
+
+### Cmdlet: Merge-O365EndpointService
+#### Added
+* Comment-based help (Get-Help support)
+
+### Cmdlet: Export-O365Ghostery
+#### Added
+* New cmdlet that exports endpoint URLs as a Ghostery enterprise policy (JSON)
+* -TrustedDomains switch exports the URLs as the Ghostery trustedDomains array
+* -Whitelist switch exports the URLs as customFilters allowlist exception rules (@@||domain^)
 
 ## [1.1.2607.1] - 2026-07-16
 ### Cmdlet: Invoke-O365EndpointService

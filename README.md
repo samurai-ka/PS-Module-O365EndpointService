@@ -8,6 +8,10 @@ To use this module simply copy it somewhere on your disk and import it directly:
 
         Import-Module O365EndpointFunctions.psm1
 
+All cmdlets in this module ship with comment based help, so you can get detailed usage information, parameters and examples at any time with
+
+        Get-Help Invoke-O365EndpointService -Full
+
 After you have imported the module you can then call the REST service. This will return to you as a collection of uri you can process in powershell directly. You must enter the name of your Office 365 tenant
 
         Invoke-O365EndpointService -tenantName [Name of your tenant]
@@ -63,3 +67,29 @@ You can define your endpoints as one or more JSON files. These files can than be
         Invoke-O365EndpointService -tenantName [YourTenantName] -ForceLatest | Merge-O365EndpointService -Path @(".\ExampleEndpoints1.json",".\ExampleEndpoints2.json") | Format-Table -AutoSize
 
 There is no JSON schema yet. So take care when creating your list.
+
+# Exporting a Ghostery policy
+
+If you use [Ghostery](https://www.ghostery.com/enterprise-privacy-solutions/documentation/policy-reference) in your enterprise you can export the endpoints as a Ghostery policy so that Office 365 traffic is not touched by the tracker protection. The cmdlet emits the policy as JSON to the pipeline, so you can pipe it directly into a Out-File cmdlet to save it as a policy file.
+
+        Export-O365Ghostery
+
+There are two ways to allow the domains, controlled by two switches. Supply both to write both keys into a single policy.
+
+* TrustedDomains
+
+  Exports the urls as the Ghostery `trustedDomains` array. Ghostery pauses its protection for these domains and automatically includes their subdomains. This is the default when neither switch is given.
+
+* Whitelist
+
+  Exports the urls as `customFilters` allowlist exception rules of the form `@@||domain^`. Ghostery has no dedicated exceptions key, so allowlisting is expressed through customFilters.
+
+Each url is normalised before it is written: the scheme and path are removed and a leading wildcard (`*.`) is stripped, because Ghostery matches subdomains on its own. Duplicate domains are removed automatically.
+
+Get the endpoints, filter them to the urls and export them as trusted domains into a policy file:
+
+        Invoke-O365EndpointService -tenantName [YourTenantName] -ForceLatest | where{$_.Protocol -eq "Url"} | Export-O365Ghostery -TrustedDomains | Out-File .\ghostery-policy.json -Encoding utf8
+
+Export the same urls as allowlist exception rules instead:
+
+        Invoke-O365EndpointService -tenantName [YourTenantName] -ForceLatest | where{$_.Protocol -eq "Url"} | Export-O365Ghostery -Whitelist
