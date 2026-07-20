@@ -38,6 +38,61 @@ class EndpointSet {
 #endregion Class definitions
 
 function Invoke-O365EndpointService {
+    <#
+    .SYNOPSIS
+        Retrieves the current Office 365 worldwide endpoints from the Microsoft web service.
+
+    .DESCRIPTION
+        Queries the Office 365 IP Address and URL web service (https://endpoints.office.com)
+        for the "Worldwide" service instance and returns one EndpointSet object per
+        URL/IP and port combination.
+
+        A client request ID and the last seen version number are cached in
+        %LOCALAPPDATA%\pwsh\O365EndpointFunctions\endpoints_clientid_latestversion.txt.
+        On each run the cached version is compared against the latest published version:
+
+          - If a newer version is available (or -ForceLatest is used), the endpoints are
+            downloaded, flattened into EndpointSet objects and returned. The cache is only
+            updated after the endpoints have been fetched successfully.
+          - If the cached version is already current, nothing is downloaded and $null is
+            returned.
+
+    .PARAMETER tenantName
+        The Office 365 tenant name used to replace the placeholders in the URLs returned
+        by the web service (for example "contoso" for contoso.onmicrosoft.com).
+
+    .PARAMETER IPv6
+        Include IPv6 address ranges in the results. By default only IPv4 ranges are
+        requested (the service is called with NoIPv6=true).
+
+    .PARAMETER ForceLatest
+        Download and return the endpoints even when the cached version number indicates
+        the local data is already up to date.
+
+    .OUTPUTS
+        EndpointSet. One object per URL/IP and port combination, or $null when the cached
+        version is already current.
+
+    .EXAMPLE
+        Invoke-O365EndpointService -tenantName 'contoso'
+
+        Returns the current endpoints for the 'contoso' tenant, or $null if the local
+        cache is already up to date.
+
+    .EXAMPLE
+        Invoke-O365EndpointService -tenantName 'contoso' -ForceLatest -IPv6
+
+        Forces a fresh download including IPv6 ranges, regardless of the cached version.
+
+    .EXAMPLE
+        Invoke-O365EndpointService -tenantName 'contoso' |
+            Where-Object category -eq 'Optimize'
+
+        Retrieves the endpoints and filters them to the 'Optimize' connectivity category.
+
+    .LINK
+        https://learn.microsoft.com/microsoft-365/enterprise/microsoft-365-ip-web-service
+    #>
     [cmdletbinding()]
     param(
 
