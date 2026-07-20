@@ -292,6 +292,89 @@ Function Test-UrlEndpoint  {
 
 #region Export-O365ProxyPacFile function
 function Export-O365ProxyPacFile {
+    <#
+    .SYNOPSIS
+        Generates a proxy auto-config (PAC) "if" block that sends Office 365 hosts DIRECT.
+
+    .DESCRIPTION
+        Takes endpoint objects (typically produced by Invoke-O365EndpointService) and emits
+        a PAC snippet to the pipeline. Each URI becomes a shExpMatch(host, "...") test; when
+        the host matches, the block returns "DIRECT" so Office 365 traffic bypasses the proxy.
+
+        The output is written to the pipeline (not the host), so it can be redirected to a
+        file. The snippet is a bare if-block: wrap it in your own FindProxyForURL function
+        and add the proxy fallback for the non-matching case.
+
+    .PARAMETER ServiceArea
+        The service area the endpoint belongs to (Common, Exchange, SharePoint, or Skype).
+        Accepted from the pipeline for convenience; not written to the PAC output.
+
+    .PARAMETER ServiceAreaDisplayName
+        The friendly service area name. Used in the inline comment when -Comments is set.
+
+    .PARAMETER Protocol
+        The endpoint protocol (for example "url" or "ip"). Accepted for pipeline binding;
+        not written to the PAC output.
+
+    .PARAMETER Uri
+        The host/URL to match, for example "*.office.com". Mandatory. This is the value
+        emitted as shExpMatch(host, "<Uri>").
+
+    .PARAMETER TcpPort
+        TCP port(s) for the endpoint set. Accepted for pipeline binding; not written to
+        the PAC output.
+
+    .PARAMETER UdpPort
+        UDP port(s) for the endpoint set. Accepted for pipeline binding; not written to
+        the PAC output.
+
+    .PARAMETER Category
+        The connectivity category (Optimize, Allow, or Default). Used in the inline
+        comment when -Comments is set.
+
+    .PARAMETER ExpressRoute
+        Whether the endpoint set is routed over ExpressRoute. Accepted for pipeline
+        binding; not written to the PAC output.
+
+    .PARAMETER Required
+        Whether connectivity to the endpoint set is required. Accepted for pipeline
+        binding; not written to the PAC output.
+
+    .PARAMETER Notes
+        Free-text notes about the endpoint set. Used in the inline comment when
+        -Comments is set.
+
+    .PARAMETER Comments
+        Append an inline "// ServiceAreaDisplayName - Category - Notes" comment to each
+        shExpMatch line. Uses the "Comments" parameter set.
+
+    .OUTPUTS
+        System.String. The lines of the generated PAC if-block.
+
+    .EXAMPLE
+        Invoke-O365EndpointService -tenantName 'contoso' |
+            Export-O365ProxyPacFile | Out-File .\o365.pac -Encoding ascii
+
+        Generates the PAC snippet for the current endpoints and writes it to o365.pac.
+
+    .EXAMPLE
+        Invoke-O365EndpointService -tenantName 'contoso' |
+            Where-Object protocol -eq 'url' |
+            Export-O365ProxyPacFile -Comments
+
+        Produces the PAC block for URL endpoints only, with an inline comment on each line.
+
+    .EXAMPLE
+        Export-O365ProxyPacFile -Uri '*.office.com'
+
+        Generates a minimal block for a single host.
+
+    .LINK
+        Invoke-O365EndpointService
+
+    .LINK
+        https://learn.microsoft.com/microsoft-365/enterprise/managing-office-365-endpoints
+    #>
     [cmdletbinding()]
     param (
         # Parameter help description
