@@ -1,0 +1,11 @@
+# The PowerShell module manifest is UTF-16 (LE, with BOM). Treat it as binary so Git never
+# applies line-ending conversion or a text merge - a three-way text merge corrupts UTF-16
+# content (it previously truncated the manifest to 0 bytes). "binary" disables diff, merge
+# and text normalization for this file.
+*.psd1 binary
+
+# Normalize line endings for the text sources.
+*.psm1 text
+*.ps1  text
+*.md   text
+*.yml  text eol=lf
