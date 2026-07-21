@@ -38,16 +38,16 @@ class EndpointSet {
     # Returns the properties one per line, in declaration order.
     [string] ToString() {
         return @(
-            "serviceArea: $($this.serviceArea)"
-            "serviceAreaDisplayName: $($this.serviceAreaDisplayName)"
-            "protocol: $($this.protocol)"
-            "uri: $($this.uri)"
-            "tcpPort: $($this.tcpPort)"
-            "udpPort: $($this.udpPort)"
-            "category: $($this.category)"
-            "expressRoute: $($this.expressRoute)"
-            "required: $($this.required)"
-            "notes: $($this.notes)"
+            $($this.serviceArea)
+            $($this.serviceAreaDisplayName)
+            $($this.protocol)
+            $($this.uri)
+            $($this.tcpPort)
+            $($this.udpPort)
+            $($this.category)
+            $($this.expressRoute)
+            $($this.required)
+            $($this.notes)
         ) -join [Environment]::NewLine
     }
 
