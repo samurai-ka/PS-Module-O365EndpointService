@@ -35,6 +35,22 @@ class EndpointSet {
     # in this endpoint set cannot be accessed at the network layer. Omitted if blank.
     [string]$notes
 
+    # Returns the properties one per line, in declaration order.
+    [string] ToString() {
+        return @(
+            "serviceArea: $($this.serviceArea)"
+            "serviceAreaDisplayName: $($this.serviceAreaDisplayName)"
+            "protocol: $($this.protocol)"
+            "uri: $($this.uri)"
+            "tcpPort: $($this.tcpPort)"
+            "udpPort: $($this.udpPort)"
+            "category: $($this.category)"
+            "expressRoute: $($this.expressRoute)"
+            "required: $($this.required)"
+            "notes: $($this.notes)"
+        ) -join [Environment]::NewLine
+    }
+
     # Internal helper that calls Invoke-RestMethod with a timeout, retries transient failures
     # and reports a clear, contextual error when a request cannot be completed. Hidden so it
     # is not part of the public surface of the class.
