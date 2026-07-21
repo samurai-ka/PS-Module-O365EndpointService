@@ -26,6 +26,13 @@ function Invoke-O365EndpointService {
         The Microsoft 365 service instance to query. One of Worldwide (default), China,
         USGovDoD, or USGovGCCHigh. Each instance is version-cached independently.
 
+    .PARAMETER ServiceAreas
+        One or more service areas to return: Common, Exchange, SharePoint, and/or Skype.
+        The web service always includes Common (it is a prerequisite for the others). If
+        omitted, all service areas are returned. Because the local cache tracks only the
+        version number - not the filter - use -ForceLatest when changing this filter between
+        runs, otherwise an unchanged version returns nothing.
+
     .PARAMETER IPv6
         Include IPv6 address ranges in the results. By default only IPv4 ranges are
         requested (the service is called with NoIPv6=true).
@@ -55,6 +62,12 @@ function Invoke-O365EndpointService {
         Returns the endpoints for the US Government GCC High cloud instance.
 
     .EXAMPLE
+        Invoke-O365EndpointService -tenantName 'contoso' -ServiceAreas Exchange, SharePoint -ForceLatest
+
+        Returns only the Exchange and SharePoint endpoints (Common is always included by the
+        service). -ForceLatest ensures a download because the cache does not track the filter.
+
+    .EXAMPLE
         Invoke-O365EndpointService -tenantName 'contoso' |
             Where-Object category -eq 'Optimize'
 
@@ -74,6 +87,11 @@ function Invoke-O365EndpointService {
         [Parameter(Mandatory=$false)]
         [ValidateSet('Worldwide','China','USGovDoD','USGovGCCHigh')]
         [string]$Instance = 'Worldwide',
+
+        # One or more service areas to return (Common is always included by the service)
+        [Parameter(Mandatory=$false)]
+        [ValidateSet('Common','Exchange','SharePoint','Skype')]
+        [string[]]$ServiceAreas,
 
         # Parameter help description
         [Parameter(Mandatory=$false)]
@@ -146,8 +164,15 @@ function Invoke-O365EndpointService {
 
         # invoke endpoints method to get the new data (URL-encode the tenant name so special characters are safe)
         $encodedTenantName = [uri]::EscapeDataString($tenantName)
+        $endpointsUri = "{0}/endpoints/{1}?format=JSON&clientRequestId={2}&TenantName={3}&NoIPv6={4}" -f $webserviceEndpointUrl, $Instance, $clientRequestId, $encodedTenantName, $NoIPv6
+
+        # optionally restrict the result to specific service areas (Common is always returned)
+        if ($ServiceAreas) {
+            $endpointsUri += "&ServiceAreas={0}" -f ($ServiceAreas -join ',')
+        }
+
         try {
-            $endpointSets = [EndpointSet]::InvokeRestRequest(("{0}/endpoints/{1}?format=JSON&clientRequestId={2}&TenantName={3}&NoIPv6={4}" -f $webserviceEndpointUrl, $Instance, $clientRequestId, $encodedTenantName, $NoIPv6))
+            $endpointSets = [EndpointSet]::InvokeRestRequest($endpointsUri)
         }
         catch {
             throw ("Unable to download the Office 365 endpoints. {0}" -f $_.Exception.Message)

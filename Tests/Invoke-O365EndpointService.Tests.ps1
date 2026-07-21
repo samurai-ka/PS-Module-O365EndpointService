@@ -108,6 +108,27 @@ Describe 'Invoke-O365EndpointService' {
             Should -Invoke -ModuleName $ModuleName Invoke-RestMethod -ParameterFilter { $Uri -match '/endpoints/China\b' }
         }
 
+        It 'passes ServiceAreas to the endpoints request when specified' {
+            Invoke-O365EndpointService -tenantName 'contoso' -ServiceAreas Exchange, SharePoint | Out-Null
+            Should -Invoke -ModuleName $ModuleName Invoke-RestMethod -ParameterFilter {
+                $Uri -match 'ServiceAreas=Exchange,SharePoint'
+            }
+        }
+
+        It 'omits ServiceAreas from the endpoints request by default' {
+            Invoke-O365EndpointService -tenantName 'contoso' | Out-Null
+            Should -Invoke -ModuleName $ModuleName Invoke-RestMethod -ParameterFilter {
+                ($Uri -match '/endpoints/') -and ($Uri -notmatch 'ServiceAreas=')
+            }
+        }
+
+        It 'never sends ServiceAreas to the version request' {
+            Invoke-O365EndpointService -tenantName 'contoso' -ServiceAreas Exchange | Out-Null
+            Should -Invoke -ModuleName $ModuleName Invoke-RestMethod -ParameterFilter {
+                ($Uri -match '/version/') -and ($Uri -notmatch 'ServiceAreas=')
+            }
+        }
+
         It 'returns $null when the cached version is already current and -ForceLatest is not used' {
             # cache already at the latest version -> no download
             Mock -ModuleName $ModuleName Get-Content { @('11111111-1111-1111-1111-111111111111', '2099010100') }
@@ -195,6 +216,18 @@ Describe 'Invoke-O365EndpointService' {
 
         It 'rejects an unknown instance' {
             { Invoke-O365EndpointService -tenantName 'contoso' -Instance 'Mars' } | Should -Throw
+        }
+
+        It 'restricts ServiceAreas to the documented service areas' {
+            $valid = (Get-Command Invoke-O365EndpointService).Parameters['ServiceAreas'].Attributes.ValidValues
+            $valid | Should -Contain 'Common'
+            $valid | Should -Contain 'Exchange'
+            $valid | Should -Contain 'SharePoint'
+            $valid | Should -Contain 'Skype'
+        }
+
+        It 'rejects an unknown service area' {
+            { Invoke-O365EndpointService -tenantName 'contoso' -ServiceAreas 'Teams' } | Should -Throw
         }
     }
 }
