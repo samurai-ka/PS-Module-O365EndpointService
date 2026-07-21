@@ -1,0 +1,62 @@
+name: Release module
+
+# Publishes the O365EndpointFunctions module to the PowerShell Gallery through the
+# "production" environment. The publish job is gated by that environment's protection
+# rules (e.g. required reviewers) and reads its PSGALLERY_API_KEY secret.
+#
+# Release is manual only: it must be started explicitly from the Actions tab
+# (Run workflow). There is intentionally no automatic trigger.
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Pester tests
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module Pester -MinimumVersion 5.0 -Force -Scope CurrentUser
+          $result = Invoke-Pester -Path ./Tests -Output Detailed -PassThru
+          if ($result.FailedCount -gt 0) {
+              throw "$($result.FailedCount) test(s) failed - aborting release."
+          }
+
+  publish:
+    name: Publish to PowerShell Gallery
+    needs: test
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://www.powershellgallery.com/packages/O365EndpointFunctions
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Stage and publish module
+        shell: pwsh
+        env:
+          PSGALLERY_API_KEY: ${{ secrets.PSGALLERY_API_KEY }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:PSGALLERY_API_KEY)) {
+              throw "The PSGALLERY_API_KEY secret is not set on the 'production' environment."
+          }
+
+          # Publish-Module requires the module to live in a folder named after the module.
+          # The repo root folder name differs, so stage the module files into a matching folder.
+          $staging = Join-Path $env:RUNNER_TEMP 'O365EndpointFunctions'
+          New-Item -ItemType Directory -Path $staging -Force | Out-Null
+          Copy-Item -Path `
+              './O365EndpointFunctions.psd1', `
+              './O365EndpointFunctions.psm1', `
+              './Public', `
+              './Private' `
+              -Destination $staging -Recurse -Force
+
+          # Fail early on a broken manifest.
+          Test-ModuleManifest -Path (Join-Path $staging 'O365EndpointFunctions.psd1') | Out-Null
+
+          Publish-Module -Path $staging -NuGetApiKey $env:PSGALLERY_API_KEY -Verbose
