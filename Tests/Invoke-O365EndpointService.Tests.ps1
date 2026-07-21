@@ -95,6 +95,19 @@ Describe 'Invoke-O365EndpointService' {
             }
         }
 
+        It 'defaults to the Worldwide instance' {
+            Invoke-O365EndpointService -tenantName 'contoso' | Out-Null
+            Should -Invoke -ModuleName $ModuleName Invoke-RestMethod -ParameterFilter {
+                $Uri -match '/endpoints/Worldwide\b'
+            }
+        }
+
+        It 'targets the requested instance in both the version and endpoints calls' {
+            Invoke-O365EndpointService -tenantName 'contoso' -Instance China | Out-Null
+            Should -Invoke -ModuleName $ModuleName Invoke-RestMethod -ParameterFilter { $Uri -match '/version/China\b' }
+            Should -Invoke -ModuleName $ModuleName Invoke-RestMethod -ParameterFilter { $Uri -match '/endpoints/China\b' }
+        }
+
         It 'returns $null when the cached version is already current and -ForceLatest is not used' {
             # cache already at the latest version -> no download
             Mock -ModuleName $ModuleName Get-Content { @('11111111-1111-1111-1111-111111111111', '2099010100') }
@@ -144,6 +157,18 @@ Describe 'Invoke-O365EndpointService' {
         It 'requires tenantName' {
             (Get-Command Invoke-O365EndpointService).Parameters['tenantName'].Attributes.Mandatory |
                 Should -Contain $true
+        }
+
+        It 'restricts Instance to the documented service instances' {
+            $valid = (Get-Command Invoke-O365EndpointService).Parameters['Instance'].Attributes.ValidValues
+            $valid | Should -Contain 'Worldwide'
+            $valid | Should -Contain 'China'
+            $valid | Should -Contain 'USGovDoD'
+            $valid | Should -Contain 'USGovGCCHigh'
+        }
+
+        It 'rejects an unknown instance' {
+            { Invoke-O365EndpointService -tenantName 'contoso' -Instance 'Mars' } | Should -Throw
         }
     }
 }

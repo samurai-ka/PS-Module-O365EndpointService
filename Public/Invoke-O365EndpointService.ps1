@@ -5,11 +5,11 @@ function Invoke-O365EndpointService {
 
     .DESCRIPTION
         Queries the Office 365 IP Address and URL web service (https://endpoints.office.com)
-        for the "Worldwide" service instance and returns one EndpointSet object per
-        URL/IP and port combination.
+        for the selected service instance (Worldwide by default) and returns one EndpointSet
+        object per URL/IP and port combination.
 
-        A client request ID and the last seen version number are cached in
-        %LOCALAPPDATA%\pwsh\O365EndpointFunctions\endpoints_clientid_latestversion.txt.
+        A client request ID and the last seen version number are cached per instance in
+        %LOCALAPPDATA%\pwsh\O365EndpointFunctions\endpoints_clientid_latestversion_<Instance>.txt.
         On each run the cached version is compared against the latest published version:
 
           - If a newer version is available (or -ForceLatest is used), the endpoints are
@@ -21,6 +21,10 @@ function Invoke-O365EndpointService {
     .PARAMETER tenantName
         The Office 365 tenant name used to replace the placeholders in the URLs returned
         by the web service (for example "contoso" for contoso.onmicrosoft.com).
+
+    .PARAMETER Instance
+        The Microsoft 365 service instance to query. One of Worldwide (default), China,
+        USGovDoD, or USGovGCCHigh. Each instance is version-cached independently.
 
     .PARAMETER IPv6
         Include IPv6 address ranges in the results. By default only IPv4 ranges are
@@ -46,6 +50,11 @@ function Invoke-O365EndpointService {
         Forces a fresh download including IPv6 ranges, regardless of the cached version.
 
     .EXAMPLE
+        Invoke-O365EndpointService -tenantName 'contoso' -Instance USGovGCCHigh
+
+        Returns the endpoints for the US Government GCC High cloud instance.
+
+    .EXAMPLE
         Invoke-O365EndpointService -tenantName 'contoso' |
             Where-Object category -eq 'Optimize'
 
@@ -60,6 +69,11 @@ function Invoke-O365EndpointService {
         # The tenant name will be used to replace placeholders in the url returned from the service
         [Parameter(Mandatory=$true)]
         [string]$tenantName,
+
+        # The Microsoft 365 service instance to query
+        [Parameter(Mandatory=$false)]
+        [ValidateSet('Worldwide','China','USGovDoD','USGovGCCHigh')]
+        [string]$Instance = 'Worldwide',
 
         # Parameter help description
         [Parameter(Mandatory=$false)]
@@ -79,7 +93,8 @@ function Invoke-O365EndpointService {
     # $dataDir = $Env:LOCALAPPDATA + "\pwsh\O365EndpointFunctions\Invoke-O365EndpointService\"
     # $datapath = $dataDir + $datafile
     $dataDir  = Join-Path -Path ([Environment]::GetFolderPath('LocalApplicationData')) -ChildPath 'pwsh/O365EndpointFunctions'
-    $datapath = Join-Path -Path $dataDir -ChildPath 'endpoints_clientid_latestversion.txt'
+    # cache the version per instance so a different instance's version is never compared against
+    $datapath = Join-Path -Path $dataDir -ChildPath ('endpoints_clientid_latestversion_{0}.txt' -f $Instance)
 
     # fetch client ID and version if data file exists; otherwise create new file
     if (Test-Path -Path $datapath) {
@@ -107,7 +122,7 @@ function Invoke-O365EndpointService {
 
     # call version method to check the latest version, and pull new data if version number is different
     try {
-        $webserviceEndpointVersion = [EndpointSet]::InvokeRestRequest(("{0}/version/Worldwide?clientRequestId={1}" -f $webserviceEndpointUrl, $clientRequestId))
+        $webserviceEndpointVersion = [EndpointSet]::InvokeRestRequest(("{0}/version/{1}?clientRequestId={2}" -f $webserviceEndpointUrl, $Instance, $clientRequestId))
     }
     catch {
         throw ("Unable to determine the latest Office 365 endpoint version. {0}" -f $_.Exception.Message)
@@ -132,7 +147,7 @@ function Invoke-O365EndpointService {
         # invoke endpoints method to get the new data (URL-encode the tenant name so special characters are safe)
         $encodedTenantName = [uri]::EscapeDataString($tenantName)
         try {
-            $endpointSets = [EndpointSet]::InvokeRestRequest(("{0}/endpoints/Worldwide?format=JSON&clientRequestId={1}&TenantName={2}&NoIPv6={3}" -f $webserviceEndpointUrl, $clientRequestId, $encodedTenantName, $NoIPv6))
+            $endpointSets = [EndpointSet]::InvokeRestRequest(("{0}/endpoints/{1}?format=JSON&clientRequestId={2}&TenantName={3}&NoIPv6={4}" -f $webserviceEndpointUrl, $Instance, $clientRequestId, $encodedTenantName, $NoIPv6))
         }
         catch {
             throw ("Unable to download the Office 365 endpoints. {0}" -f $_.Exception.Message)
