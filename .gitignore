@@ -1,0 +1,29 @@
+# ---------------------------------------------------------------------------
+# Claude Code
+# ---------------------------------------------------------------------------
+# Local Claude Code configuration and personal instructions
+.claude/
+CLAUDE.local.md
+
+# ---------------------------------------------------------------------------
+# PowerShell
+# ---------------------------------------------------------------------------
+# Module build / publish artifacts
+*.nupkg
+*.snupkg
+Output/
+BuildOutput/
+out/
+
+# Pester test results and code coverage
+testResults*.xml
+*.TestResults.xml
+coverage*.xml
+*.coverage
+*.coveragexml
+
+# PowerShell transcripts
+PowerShell_transcript.*.txt
+
+# Local module cache / temp
+*.tmp
