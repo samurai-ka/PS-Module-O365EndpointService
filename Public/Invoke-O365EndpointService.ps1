@@ -77,6 +77,7 @@ function Invoke-O365EndpointService {
         https://learn.microsoft.com/microsoft-365/enterprise/microsoft-365-ip-web-service
     #>
     [cmdletbinding()]
+    [OutputType('EndpointSet')]
     param(
 
         # The tenant name will be used to replace placeholders in the url returned from the service

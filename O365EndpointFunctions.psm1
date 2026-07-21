@@ -183,14 +183,14 @@ class EndpointSet {
             # PowerShell 7: HttpResponseHeaders exposes a typed RetryAfter property
             try {
                 if ($headers.RetryAfter) { return $headers.RetryAfter.ToString() }
-            } catch { }
+            } catch { $null = $_ }
 
             # Windows PowerShell 5.1 (WebHeaderCollection) or a plain collection: string indexer
             try {
                 $raw = $headers['Retry-After']
                 if ($raw) { return (@($raw) -join ',') }
-            } catch { }
-        } catch { }
+            } catch { $null = $_ }
+        } catch { $null = $_ }
         return $null
     }
 }

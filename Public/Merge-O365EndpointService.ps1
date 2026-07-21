@@ -71,6 +71,7 @@ function Merge-O365EndpointService {
         Invoke-O365EndpointService
     #>
     [CmdletBinding()]
+    [OutputType('EndpointSet')]
     param (
         # The immutable endpoint set ID; bound from the pipeline (e.g. Invoke-O365EndpointService
         # output) or from JSON when present, so it survives a merge round-trip.

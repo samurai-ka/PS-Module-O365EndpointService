@@ -83,6 +83,7 @@ function Export-O365ProxyPacFile {
         https://learn.microsoft.com/microsoft-365/enterprise/managing-office-365-endpoints
     #>
     [cmdletbinding()]
+    [OutputType([string])]
     param (
         # Parameter help description
         [parameter( Position = 0,

@@ -64,6 +64,7 @@ function Export-O365Ghostery {
         https://www.ghostery.com/enterprise-privacy-solutions/documentation/policy-reference
     #>
     [cmdletbinding()]
+    [OutputType([string])]
     param (
         # The host/URL to export as a Ghostery domain.
         [parameter( Position = 0,
