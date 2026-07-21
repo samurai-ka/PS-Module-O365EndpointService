@@ -123,15 +123,30 @@ class EndpointSet {
                 # Determine the HTTP status code (if the failure carried an HTTP response) so we
                 # can tell retryable problems from permanent ones.
                 $statusCode = $null
-                if ($_.Exception.Response) {
-                    try { $statusCode = [int]$_.Exception.Response.StatusCode } catch { $statusCode = $null }
+                $response   = $_.Exception.Response
+                if ($response) {
+                    try { $statusCode = [int]$response.StatusCode } catch { $statusCode = $null }
                 }
 
-                # 4xx client errors will not succeed on retry, except 408 (Request Timeout) and
-                # 429 (Too Many Requests) which are transient.
+                # HTTP 429 (Too Many Requests): the endpoints/changes methods are rate limited.
+                # A short retry will not help - the service guidance is to wait about an hour or
+                # use a new client request ID - so fail fast with an actionable message instead
+                # of burning the remaining attempts. (The version method is never rate limited.)
+                if ($statusCode -eq 429) {
+                    $retryAfter = [EndpointSet]::GetRetryAfter($response)
+                    $waitHint = if ($retryAfter) {
+                        "Retry after $retryAfter."
+                    } else {
+                        "Wait about an hour before retrying, or use a new client request ID."
+                    }
+                    throw ("Request to '{0}' was rate limited (HTTP 429). {1}" -f $Uri, $waitHint)
+                }
+
+                # 4xx client errors will not succeed on retry, except 408 (Request Timeout),
+                # which is transient.
                 $isNonRetryable = ($null -ne $statusCode) -and
                                   ($statusCode -ge 400) -and ($statusCode -lt 500) -and
-                                  ($statusCode -ne 408) -and ($statusCode -ne 429)
+                                  ($statusCode -ne 408)
 
                 $statusText = if ($null -ne $statusCode) { " (HTTP $statusCode)" } else { "" }
 
@@ -151,6 +166,29 @@ class EndpointSet {
     # Overload using the default retry/timeout settings (3 attempts, 2s apart, 30s timeout).
     hidden static [object] InvokeRestRequest([string]$Uri) {
         return [EndpointSet]::InvokeRestRequest($Uri, 3, 2, 30)
+    }
+
+    # Best-effort extraction of the Retry-After header from a failed HTTP response. Works with
+    # HttpResponseMessage (PowerShell 7) and HttpWebResponse (Windows PowerShell 5.1); returns
+    # $null when the header is absent or cannot be read.
+    hidden static [string] GetRetryAfter([object]$response) {
+        if ($null -eq $response) { return $null }
+        try {
+            $headers = $response.Headers
+            if ($null -eq $headers) { return $null }
+
+            # PowerShell 7: HttpResponseHeaders exposes a typed RetryAfter property
+            try {
+                if ($headers.RetryAfter) { return $headers.RetryAfter.ToString() }
+            } catch { }
+
+            # Windows PowerShell 5.1 (WebHeaderCollection) or a plain collection: string indexer
+            try {
+                $raw = $headers['Retry-After']
+                if ($raw) { return (@($raw) -join ',') }
+            } catch { }
+        } catch { }
+        return $null
     }
 }
 #endregion Class definitions

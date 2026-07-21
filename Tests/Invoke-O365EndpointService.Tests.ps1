@@ -151,6 +151,32 @@ Describe 'Invoke-O365EndpointService' {
             { Invoke-O365EndpointService -tenantName 'contoso' -ForceLatest } |
                 Should -Throw '*Unable to download the Office 365 endpoints*'
         }
+
+        It 'fails fast on HTTP 429 without retrying and surfaces the Retry-After hint' {
+            Mock -ModuleName $ModuleName Invoke-RestMethod {
+                $resp = [pscustomobject]@{ StatusCode = 429; Headers = @{ 'Retry-After' = '3600' } }
+                $ex = [System.Exception]::new('Too Many Requests')
+                Add-Member -InputObject $ex -NotePropertyName Response -NotePropertyValue $resp
+                throw $ex
+            }
+            { Invoke-O365EndpointService -tenantName 'contoso' } |
+                Should -Throw '*rate limited (HTTP 429)*Retry after 3600*'
+
+            # the version call is where the 429 is raised; it must NOT be retried
+            Should -Invoke -ModuleName $ModuleName Invoke-RestMethod -Times 1 -Exactly
+            Should -Invoke -ModuleName $ModuleName Start-Sleep -Times 0 -Exactly
+        }
+
+        It 'gives generic guidance on HTTP 429 when no Retry-After header is present' {
+            Mock -ModuleName $ModuleName Invoke-RestMethod {
+                $resp = [pscustomobject]@{ StatusCode = 429; Headers = @{} }
+                $ex = [System.Exception]::new('Too Many Requests')
+                Add-Member -InputObject $ex -NotePropertyName Response -NotePropertyValue $resp
+                throw $ex
+            }
+            { Invoke-O365EndpointService -tenantName 'contoso' } |
+                Should -Throw '*rate limited (HTTP 429)*Wait about an hour*'
+        }
     }
 
     Context 'parameters' {
