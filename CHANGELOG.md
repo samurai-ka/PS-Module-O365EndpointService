@@ -10,6 +10,11 @@ Using the changelog schema https://keepachangelog.com/en/0.3.0/
 ### Cmdlet: Invoke-O365EndpointService
 #### Added
 * Comment-based help (Get-Help support)
+* Robust REST handling: request timeout, retry of transient failures (skipping non-retryable 4xx) and clear, contextual error messages for the version and endpoints calls
+
+#### Changed
+* Tenant name is now URL-encoded before it is passed to the endpoints web service
+* Corrupt or truncated cache files are tolerated (client ID / version are regenerated)
 
 #### Fixed
 * Version cache was written before the endpoints were fetched, so a failed download left the cache marked up-to-date (cache poisoning)

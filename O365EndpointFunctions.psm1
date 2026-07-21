@@ -34,6 +34,50 @@ class EndpointSet {
     # For optional endpoints, this text describes Office 365 functionality that will be missing if IP addresses or URLs
     # in this endpoint set cannot be accessed at the network layer. Omitted if blank.
     [string]$notes
+
+    # Internal helper that calls Invoke-RestMethod with a timeout, retries transient failures
+    # and reports a clear, contextual error when a request cannot be completed. Hidden so it
+    # is not part of the public surface of the class.
+    hidden static [object] InvokeRestRequest([string]$Uri, [int]$MaximumRetryCount, [int]$RetryIntervalSec, [int]$TimeoutSec) {
+        $attempt = 0
+        while ($true) {
+            $attempt++
+            try {
+                return Invoke-RestMethod -Uri $Uri -Method Get -TimeoutSec $TimeoutSec -ErrorAction Stop
+            }
+            catch {
+                # Determine the HTTP status code (if the failure carried an HTTP response) so we
+                # can tell retryable problems from permanent ones.
+                $statusCode = $null
+                if ($_.Exception.Response) {
+                    try { $statusCode = [int]$_.Exception.Response.StatusCode } catch { $statusCode = $null }
+                }
+
+                # 4xx client errors will not succeed on retry, except 408 (Request Timeout) and
+                # 429 (Too Many Requests) which are transient.
+                $isNonRetryable = ($null -ne $statusCode) -and
+                                  ($statusCode -ge 400) -and ($statusCode -lt 500) -and
+                                  ($statusCode -ne 408) -and ($statusCode -ne 429)
+
+                $statusText = if ($null -ne $statusCode) { " (HTTP $statusCode)" } else { "" }
+
+                if ($isNonRetryable -or ($attempt -ge $MaximumRetryCount)) {
+                    throw ("Request to '{0}' failed after {1} attempt(s){2}: {3}" -f $Uri, $attempt, $statusText, $_.Exception.Message)
+                }
+
+                Write-Warning ("Request to '{0}' failed (attempt {1}/{2}){3}: {4} - retrying in {5}s" -f `
+                    $Uri, $attempt, $MaximumRetryCount, $statusText, $_.Exception.Message, $RetryIntervalSec)
+                Start-Sleep -Seconds $RetryIntervalSec
+            }
+        }
+        # unreachable: the loop either returns a result or throws
+        throw "Request to '$Uri' failed."
+    }
+
+    # Overload using the default retry/timeout settings (3 attempts, 2s apart, 30s timeout).
+    hidden static [object] InvokeRestRequest([string]$Uri) {
+        return [EndpointSet]::InvokeRestRequest($Uri, 3, 2, 30)
+    }
 }
 #endregion Class definitions
 
@@ -114,10 +158,10 @@ function Invoke-O365EndpointService {
 
     # path where client ID and latest version number will be stored
     #$datapath = $Env:TEMP + "\endpoints_clientid_latestversion.txt"
-    $datafile = "endpoints_clientid_latestversion.txt"
+    # $datafile = "endpoints_clientid_latestversion.txt"
     # $dataDir = $Env:LOCALAPPDATA + "\pwsh\O365EndpointFunctions\Invoke-O365EndpointService\"
-    $dataDir  = Join-Path -Path ([Environment]::GetFolderPath('LocalApplicationData')) -ChildPath 'pwsh/O365EndpointFunctions'
     # $datapath = $dataDir + $datafile
+    $dataDir  = Join-Path -Path ([Environment]::GetFolderPath('LocalApplicationData')) -ChildPath 'pwsh/O365EndpointFunctions'
     $datapath = Join-Path -Path $dataDir -ChildPath 'endpoints_clientid_latestversion.txt'
 
     # fetch client ID and version if data file exists; otherwise create new file
@@ -128,7 +172,7 @@ function Invoke-O365EndpointService {
     }
     else {
         if (!(Test-Path -Path $dataDir)) {
-            New-Item -ItemType directory -Path $dataDir
+            New-Item -ItemType directory -Path $dataDir | Out-Null
         }
 
         $clientRequestId = [GUID]::NewGuid().Guid
@@ -136,8 +180,26 @@ function Invoke-O365EndpointService {
         @($clientRequestId, $lastVersion) | Out-File $datapath
     }
 
+    # guard against a corrupt or truncated cache file so a valid request can still be built
+    if ([string]::IsNullOrWhiteSpace($clientRequestId)) {
+        $clientRequestId = [GUID]::NewGuid().Guid
+    }
+    if ([string]::IsNullOrWhiteSpace($lastVersion)) {
+        $lastVersion = "0000000000"
+    }
+
     # call version method to check the latest version, and pull new data if version number is different
-    $webserviceEndpointVersion = Invoke-RestMethod -Uri ("{0}/version/Worldwide?clientRequestId={1}" -f $webserviceEndpointUrl,$clientRequestId)
+    try {
+        $webserviceEndpointVersion = [EndpointSet]::InvokeRestRequest(("{0}/version/Worldwide?clientRequestId={1}" -f $webserviceEndpointUrl, $clientRequestId))
+    }
+    catch {
+        throw ("Unable to determine the latest Office 365 endpoint version. {0}" -f $_.Exception.Message)
+    }
+
+    # make sure the service actually returned a version to compare against
+    if (($null -eq $webserviceEndpointVersion) -or [string]::IsNullOrWhiteSpace($webserviceEndpointVersion.latest)) {
+        throw "The Office 365 version web service returned no 'latest' version number."
+    }
 
     if (($webserviceEndpointVersion.latest -gt $lastVersion) -or ($ForceLatest.IsPresent)) {
     #    Write-EventLog -LogName "Application" -Source $eventSource -EventId $eventNewEndpoints -EntryType Information -Message "New version of Office 365 worldwide commercial service instance endpoints detected" -Category 1
@@ -150,8 +212,14 @@ function Invoke-O365EndpointService {
             $NoIPv6 = "true"
         }
 
-        # invoke endpoints method to get the new data
-        $endpointSets = Invoke-RestMethod -Uri ("{0}/endpoints/Worldwide?format=JSON&clientRequestId={1}&TenantName={2}&NoIPv6={3}" -f $webserviceEndpointUrl,$clientRequestId,$tenantName,$NoIPv6)
+        # invoke endpoints method to get the new data (URL-encode the tenant name so special characters are safe)
+        $encodedTenantName = [uri]::EscapeDataString($tenantName)
+        try {
+            $endpointSets = [EndpointSet]::InvokeRestRequest(("{0}/endpoints/Worldwide?format=JSON&clientRequestId={1}&TenantName={2}&NoIPv6={3}" -f $webserviceEndpointUrl, $clientRequestId, $encodedTenantName, $NoIPv6))
+        }
+        catch {
+            throw ("Unable to download the Office 365 endpoints. {0}" -f $_.Exception.Message)
+        }
 
         [System.Collections.ArrayList]$endpoints = @()
         foreach($endpointSet in $endpointSets){
