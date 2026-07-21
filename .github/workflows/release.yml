@@ -7,8 +7,8 @@ name: Release module
 # Release is manual only: it must be started explicitly from the Actions tab
 # (Run workflow). There is intentionally no automatic trigger.
 #
-# Tests are NOT run here - they run in ci.yml on every push. This workflow refuses to
-# publish unless the latest CI run on the selected branch concluded successfully.
+# Tests are NOT run here - they run in development.yml on every push. This workflow refuses
+# to publish unless the latest development.yml run on the selected branch concluded successfully.
 on:
   workflow_dispatch:
 
@@ -32,12 +32,12 @@ jobs:
         shell: bash
         run: |
           branch="${{ github.ref_name }}"
-          conclusion=$(gh run list --workflow ci.yml --branch "$branch" --limit 20 \
+          conclusion=$(gh run list --workflow development.yml --branch "$branch" --limit 20 \
             --json conclusion,status \
             --jq '[.[] | select(.status=="completed")][0].conclusion')
           echo "Latest completed CI run on '$branch': ${conclusion:-<none>}"
           if [ "$conclusion" != "success" ]; then
-            echo "::error::CI (ci.yml) has not succeeded on '$branch' (conclusion: ${conclusion:-none}). Aborting release."
+            echo "::error::CI (development.yml) has not succeeded on '$branch' (conclusion: ${conclusion:-none}). Aborting release."
             exit 1
           fi
 
