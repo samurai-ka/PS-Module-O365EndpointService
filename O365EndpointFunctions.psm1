@@ -1,9 +1,3 @@
-#Requires -Version 5
-# #Requires -PSSnapin <PSSnapin-Name> [-Version <N>[.<n>]]
-# #Requires -Modules { <Module-Name> | <Hashtable> }
-# #Requires -ShellId <ShellId>
-# #Requires -RunAsAdministrator
-
 #region Class definitions
 # Class EndpointSet definies a dataset returned by the webservice.
 # The class stays in this root module so it is parsed directly at import time. That avoids the
