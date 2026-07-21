@@ -72,6 +72,12 @@ function Merge-O365EndpointService {
     #>
     [CmdletBinding()]
     param (
+        # The immutable endpoint set ID; bound from the pipeline (e.g. Invoke-O365EndpointService
+        # output) or from JSON when present, so it survives a merge round-trip.
+        [parameter( Mandatory = $false,
+                    ValueFromPipelineByPropertyName)]
+        [Nullable[int]]$id,
+
         # Parameter help description
         [parameter( Position = 0,
                     Mandatory = $false,
@@ -154,11 +160,14 @@ function Merge-O365EndpointService {
     )
 
     begin {
-        $endpoints = [System.Collections.Generic.List[EndpointSet]]::new()
+        # List[object] (not List[EndpointSet]) so a module re-import - which gives the class a
+        # new type identity - cannot cause "Cannot find an overload for Add" on the new instances.
+        $endpoints = [System.Collections.Generic.List[object]]::new()
     }
 
     process {
         $endpoint = [EndpointSet]::new(
+            $id,
             $ServiceArea,
             $ServiceAreaDisplayName,
             $Protocol,
@@ -181,6 +190,7 @@ function Merge-O365EndpointService {
 
                 foreach ($endpointJSON in $endpointsJSON) {
                     $endpoint = [EndpointSet]::new(
+                        $endpointJSON.id,
                         $endpointJSON.serviceArea,
                         $endpointJSON.serviceAreaDisplayName,
                         $endpointJSON.protocol,

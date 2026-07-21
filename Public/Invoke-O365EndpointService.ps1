@@ -178,7 +178,11 @@ function Invoke-O365EndpointService {
             throw ("Unable to download the Office 365 endpoints. {0}" -f $_.Exception.Message)
         }
 
-        $endpoints = [System.Collections.Generic.List[EndpointSet]]::new()
+        # Use List[object] rather than List[EndpointSet]: after a module re-import the class
+        # gets a new type identity, and a list bound to the previous EndpointSet type rejects
+        # the freshly constructed instances with "Cannot find an overload for Add". Collecting
+        # as [object] sidesteps that while still returning EndpointSet objects.
+        $endpoints = [System.Collections.Generic.List[object]]::new()
         foreach($endpointSet in $endpointSets){
 
             if ($null -ne $endpointSet.urls) {
@@ -188,6 +192,7 @@ function Invoke-O365EndpointService {
                         foreach ($endpointTcpPort in $endpointSet.tcpPorts.Split(",")) {
 
                             $endpoint = [EndpointSet]::new(
+                                $endpointSet.id,
                                 $endpointSet.serviceArea,
                                 $endpointSet.serviceAreaDisplayName,
                                 "url",
@@ -208,6 +213,7 @@ function Invoke-O365EndpointService {
                         foreach ($endpointUdpPort in $endpointSet.udpPorts.Split(",")) {
 
                             $endpoint = [EndpointSet]::new(
+                                $endpointSet.id,
                                 $endpointSet.serviceArea,
                                 $endpointSet.serviceAreaDisplayName,
                                 "url",
@@ -232,6 +238,7 @@ function Invoke-O365EndpointService {
                     foreach ($endpointTcpPort in $endpointSet.tcpPorts.Split(",")) {
 
                         $endpoint = [EndpointSet]::new(
+                            $endpointSet.id,
                             $endpointSet.serviceArea,
                             $endpointSet.serviceAreaDisplayName,
                             "ip",
@@ -252,6 +259,7 @@ function Invoke-O365EndpointService {
                     foreach ($endpointUdpPort in $endpointSet.udpPorts.Split(",")) {
 
                         $endpoint = [EndpointSet]::new(
+                            $endpointSet.id,
                             $endpointSet.serviceArea,
                             $endpointSet.serviceAreaDisplayName,
                             "ip",

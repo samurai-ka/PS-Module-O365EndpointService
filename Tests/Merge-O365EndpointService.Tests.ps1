@@ -37,6 +37,17 @@ Describe 'Merge-O365EndpointService' {
         $fromFile.udpPort            | Should -BeNullOrEmpty
     }
 
+    It 'preserves the endpoint set id from both the pipeline and JSON' {
+        $jsonPath = Join-Path $TestDrive 'withid.json'
+        '[{"id":42,"uri":"file.example.com","protocol":"url"}]' | Out-File $jsonPath -Encoding utf8
+
+        $piped  = [pscustomobject]@{ id = 7; uri = 'piped.example.com'; protocol = 'url' }
+        $result = $piped | Merge-O365EndpointService -Path $jsonPath
+
+        ($result | Where-Object uri -eq 'piped.example.com').id | Should -Be 7
+        ($result | Where-Object uri -eq 'file.example.com').id  | Should -Be 42
+    }
+
     It 'ignores paths that are not .json' {
         $txtPath = Join-Path $TestDrive 'notjson.txt'
         'this is not json' | Out-File $txtPath -Encoding utf8

@@ -11,6 +11,11 @@
 # plain functions below are dot-sourced from Private/ and Public/, which is safe because their
 # bodies only reference [EndpointSet] at run time, by which point this class is already loaded.
 class EndpointSet {
+    # The immutable ID number of the endpoint set as returned by the web service. This is the
+    # key that the "changes" web method references via endpointSetId. $null for endpoints that
+    # do not originate from the service (e.g. custom entries merged in).
+    [Nullable[int]]$id
+
     # The service area that this is part of: Common, Exchange, SharePoint, or Skype.
     [string]$serviceArea
 
@@ -44,6 +49,7 @@ class EndpointSet {
 
     # Full constructor - populates every property in declaration order.
     EndpointSet(
+        [Nullable[int]]$id,
         [string]$serviceArea,
         [string]$serviceAreaDisplayName,
         [string]$protocol,
@@ -55,6 +61,7 @@ class EndpointSet {
         [bool]$required,
         [string]$notes
     ) {
+        $this.id                     = $id
         $this.serviceArea            = $serviceArea
         $this.serviceAreaDisplayName = $serviceAreaDisplayName
         $this.protocol               = $protocol
@@ -73,6 +80,7 @@ class EndpointSet {
     # Returns the properties one per line, in declaration order.
     [string] ToString() {
         return @(
+            $($this.id)
             $($this.serviceArea)
             $($this.serviceAreaDisplayName)
             $($this.protocol)
@@ -90,6 +98,7 @@ class EndpointSet {
     # wrapped in double quotes; embedded double quotes are doubled ("" per RFC 4180).
     [string] ToCSV() {
         $values = @(
+            $this.id
             $this.serviceArea
             $this.serviceAreaDisplayName
             $this.protocol

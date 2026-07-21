@@ -26,18 +26,21 @@ Describe 'Invoke-O365EndpointService' {
                 else {
                     @(
                         [pscustomobject]@{
+                            id = 1
                             serviceArea = 'Exchange'; serviceAreaDisplayName = 'Exchange Online'
                             category = 'Optimize'; expressRoute = $true; required = $true; notes = ''
                             urls = @('outlook.office.com'); ips = $null
                             tcpPorts = '80,443'; udpPorts = $null
                         }
                         [pscustomobject]@{
+                            id = 2
                             serviceArea = 'Exchange'; serviceAreaDisplayName = 'Exchange Online'
                             category = 'Allow'; expressRoute = $false; required = $false; notes = 'mail'
                             urls = $null; ips = @('13.107.6.152/31')
                             tcpPorts = '143, 587'; udpPorts = $null      # spaced list -> exercises Trim
                         }
                         [pscustomobject]@{
+                            id = 3
                             serviceArea = 'Skype'; serviceAreaDisplayName = 'Skype'
                             category = 'Default'; expressRoute = $false; required = $false; notes = ''
                             urls = $null; ips = @('52.112.0.0/14')
@@ -52,6 +55,15 @@ Describe 'Invoke-O365EndpointService' {
             $result = Invoke-O365EndpointService -tenantName 'contoso'
             # set1: 1 url x 2 tcp = 2 ; set2: 1 ip x 2 tcp = 2 ; set3: 1 ip x 2 udp = 2
             @($result).Count | Should -Be 6
+        }
+
+        It 'captures the endpoint set id' {
+            $result = Invoke-O365EndpointService -tenantName 'contoso'
+            $urlEp = $result | Where-Object { $_.uri -eq 'outlook.office.com' } | Select-Object -First 1
+            $urlEp.id | Should -Be 1
+            $urlEp.id.GetType().Name | Should -Be 'Int32'
+            # id from set 3 (Skype/udp) is carried onto its flattened rows too
+            ($result | Where-Object { $_.udpPort -eq 3478 }).id | Should -Be 3
         }
 
         It 'sets protocol and parses ports as uint16, leaving the unused port $null' {
