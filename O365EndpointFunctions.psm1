@@ -221,7 +221,7 @@ function Invoke-O365EndpointService {
             throw ("Unable to download the Office 365 endpoints. {0}" -f $_.Exception.Message)
         }
 
-        [System.Collections.ArrayList]$endpoints = @()
+        $endpoints = [System.Collections.Generic.List[EndpointSet]]::new()
         foreach($endpointSet in $endpointSets){
 
             if ($null -ne $endpointSet.urls) {
@@ -242,7 +242,7 @@ function Invoke-O365EndpointService {
                             $endpoint.uri                       = $endpointUrl
                             $endpoint.tcpPort                   = $endpointTcpPort
 
-                            $endpoints.Add($endpoint) > $null
+                            $endpoints.Add($endpoint)
 
                         }
                     }
@@ -261,7 +261,7 @@ function Invoke-O365EndpointService {
                             $endpoint.uri                       = $endpointUrl
                             $endpoint.udpPort                   = $endpointUdpPort
 
-                            $endpoints.Add($endpoint) > $null
+                            $endpoints.Add($endpoint)
 
                         }
                     }
@@ -284,7 +284,7 @@ function Invoke-O365EndpointService {
                         $endpoint.uri                       = $endpointIP
                         $endpoint.tcpPort                   = $endpointTcpPort
 
-                        $endpoints.Add($endpoint) > $null
+                        $endpoints.Add($endpoint)
 
                     }
                 }
@@ -303,7 +303,7 @@ function Invoke-O365EndpointService {
                         $endpoint.uri                       = $endpointIP
                         $endpoint.udpPort                   = $endpointUdpPort
 
-                        $endpoints.Add($endpoint) > $null
+                        $endpoints.Add($endpoint)
 
                     }
                 }
@@ -714,7 +714,7 @@ function Merge-O365EndpointService {
     )
     
     begin {
-        [System.Collections.ArrayList]$endpoints = @()
+        $endpoints = [System.Collections.Generic.List[EndpointSet]]::new()
     }
     
     process {
@@ -731,7 +731,7 @@ function Merge-O365EndpointService {
         $endpoint.required                  = $Required
         $endpoint.notes                     = $Notes
         
-        $endpoints.Add($endpoint) > $null
+        $endpoints.Add($endpoint)
     }
     
     end {
@@ -753,7 +753,7 @@ function Merge-O365EndpointService {
                     $endpoint.required                  = $endpointJSON.required
                     $endpoint.notes                     = $endpointJSON.notes
             
-                    $endpoints.Add($endpoint) > $null
+                    $endpoints.Add($endpoint)
                 }
             }
         }
