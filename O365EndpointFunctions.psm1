@@ -15,12 +15,12 @@ class EndpointSet {
     [string]$protocol
     [string]$uri
 
-    # TCP ports for the endpoint set. All ports elements are formatted as a comma-separated list of ports or
-    # port ranges separated by a dash character (-). Ports apply to all IP addresses and all URLs in that endpoint set for that category. Omitted if blank.
-    [string]$tcpPort
+    # TCP port for the endpoint set (a single port; the comma-separated list returned by the
+    # web service is split into one EndpointSet per port). $null when not set.
+    [Nullable[uint16]]$tcpPort
 
-    # UDP ports for the IP address ranges in this endpoint set. Omitted if blank.
-    [string]$udpPort
+    # UDP port for the endpoint set (a single port). $null when not set.
+    [Nullable[uint16]]$udpPort
 
     # The connectivity category for the endpoint set. Valid values are Optimize, Allow, and Default. Required.
     [string]$category
@@ -34,6 +34,37 @@ class EndpointSet {
     # For optional endpoints, this text describes Office 365 functionality that will be missing if IP addresses or URLs
     # in this endpoint set cannot be accessed at the network layer. Omitted if blank.
     [string]$notes
+
+    # Default (parameterless) constructor.
+    EndpointSet() { }
+
+    # Full constructor - populates every property in declaration order.
+    EndpointSet(
+        [string]$serviceArea,
+        [string]$serviceAreaDisplayName,
+        [string]$protocol,
+        [string]$uri,
+        [string]$tcpPort,
+        [string]$udpPort,
+        [string]$category,
+        [bool]$expressRoute,
+        [bool]$required,
+        [string]$notes
+    ) {
+        $this.serviceArea            = $serviceArea
+        $this.serviceAreaDisplayName = $serviceAreaDisplayName
+        $this.protocol               = $protocol
+        $this.uri                    = $uri
+        # ports arrive as strings from the REST API, sometimes with surrounding whitespace
+        # (e.g. "143, 587" -> " 587"); trim and convert to uint16. Empty values are left
+        # unset so the [Nullable[uint16]] property stays $null.
+        if (-not [string]::IsNullOrWhiteSpace($tcpPort)) { $this.tcpPort = [uint16]($tcpPort.Trim()) }
+        if (-not [string]::IsNullOrWhiteSpace($udpPort)) { $this.udpPort = [uint16]($udpPort.Trim()) }
+        $this.category               = $category
+        $this.expressRoute           = $expressRoute
+        $this.required               = $required
+        $this.notes                  = $notes
+    }
 
     # Returns the properties one per line, in declaration order.
     [string] ToString() {
@@ -246,17 +277,18 @@ function Invoke-O365EndpointService {
                     if ($null -ne $endpointSet.tcpPorts) {
                         foreach ($endpointTcpPort in $endpointSet.tcpPorts.Split(",")) {
                             
-                            $endpoint = New-Object EndpointSet
-
-                            $endpoint.serviceArea               = $endpointSet.serviceArea
-                            $endpoint.serviceAreaDisplayName    = $endpointSet.serviceAreaDisplayName
-                            $endpoint.expressRoute              = $endpointSet.expressRoute
-                            $endpoint.category                  = $endpointSet.category
-                            $endpoint.required                  = $endpointSet.required
-                            $endpoint.notes                     = $endpointSet.notes
-                            $endpoint.protocol                  = "url"
-                            $endpoint.uri                       = $endpointUrl
-                            $endpoint.tcpPort                   = $endpointTcpPort
+                            $endpoint = [EndpointSet]::new(
+                                $endpointSet.serviceArea,
+                                $endpointSet.serviceAreaDisplayName,
+                                "url",
+                                $endpointUrl,
+                                $endpointTcpPort,
+                                "",
+                                $endpointSet.category,
+                                $endpointSet.expressRoute,
+                                $endpointSet.required,
+                                $endpointSet.notes
+                            )
 
                             $endpoints.Add($endpoint)
 
@@ -265,17 +297,18 @@ function Invoke-O365EndpointService {
                     if ($null -ne $endpointSet.udpPorts) {
                         foreach ($endpointUdpPort in $endpointSet.udpPorts.Split(",")) {
                             
-                            $endpoint = New-Object EndpointSet
-
-                            $endpoint.serviceArea               = $endpointSet.serviceArea
-                            $endpoint.serviceAreaDisplayName    = $endpointSet.serviceAreaDisplayName
-                            $endpoint.expressRoute              = $endpointSet.expressRoute
-                            $endpoint.category                  = $endpointSet.category
-                            $endpoint.required                  = $endpointSet.required
-                            $endpoint.notes                     = $endpointSet.notes
-                            $endpoint.protocol                  = "url"
-                            $endpoint.uri                       = $endpointUrl
-                            $endpoint.udpPort                   = $endpointUdpPort
+                            $endpoint = [EndpointSet]::new(
+                                $endpointSet.serviceArea,
+                                $endpointSet.serviceAreaDisplayName,
+                                "url",
+                                $endpointUrl,
+                                "",
+                                $endpointUdpPort,
+                                $endpointSet.category,
+                                $endpointSet.expressRoute,
+                                $endpointSet.required,
+                                $endpointSet.notes
+                            )
 
                             $endpoints.Add($endpoint)
 
@@ -288,17 +321,18 @@ function Invoke-O365EndpointService {
                 if ($null -ne $endpointSet.tcpPorts) {
                     foreach ($endpointTcpPort in $endpointSet.tcpPorts.Split(",")) {
                         
-                        $endpoint = New-Object EndpointSet
-
-                        $endpoint.serviceArea               = $endpointSet.serviceArea
-                        $endpoint.serviceAreaDisplayName    = $endpointSet.serviceAreaDisplayName
-                        $endpoint.expressRoute              = $endpointSet.expressRoute
-                        $endpoint.category                  = $endpointSet.category
-                        $endpoint.required                  = $endpointSet.required
-                        $endpoint.notes                     = $endpointSet.notes
-                        $endpoint.protocol                  = "ip"
-                        $endpoint.uri                       = $endpointIP
-                        $endpoint.tcpPort                   = $endpointTcpPort
+                        $endpoint = [EndpointSet]::new(
+                            $endpointSet.serviceArea,
+                            $endpointSet.serviceAreaDisplayName,
+                            "ip",
+                            $endpointIP,
+                            $endpointTcpPort,
+                            "",
+                            $endpointSet.category,
+                            $endpointSet.expressRoute,
+                            $endpointSet.required,
+                            $endpointSet.notes
+                        )
 
                         $endpoints.Add($endpoint)
 
@@ -307,17 +341,18 @@ function Invoke-O365EndpointService {
                 if ($null -ne $endpointSet.udpPorts) {
                     foreach ($endpointUdpPort in $endpointSet.udpPorts.Split(",")) {
                         
-                        $endpoint = New-Object EndpointSet
-
-                        $endpoint.serviceArea               = $endpointSet.serviceArea
-                        $endpoint.serviceAreaDisplayName    = $endpointSet.serviceAreaDisplayName
-                        $endpoint.expressRoute              = $endpointSet.expressRoute
-                        $endpoint.category                  = $endpointSet.category
-                        $endpoint.required                  = $endpointSet.required
-                        $endpoint.notes                     = $endpointSet.notes
-                        $endpoint.protocol                  = "ip"
-                        $endpoint.uri                       = $endpointIP
-                        $endpoint.udpPort                   = $endpointUdpPort
+                        $endpoint = [EndpointSet]::new(
+                            $endpointSet.serviceArea,
+                            $endpointSet.serviceAreaDisplayName,
+                            "ip",
+                            $endpointIP,
+                            "",
+                            $endpointUdpPort,
+                            $endpointSet.category,
+                            $endpointSet.expressRoute,
+                            $endpointSet.required,
+                            $endpointSet.notes
+                        )
 
                         $endpoints.Add($endpoint)
 
@@ -734,18 +769,18 @@ function Merge-O365EndpointService {
     }
     
     process {
-        $endpoint = New-Object EndpointSet
-
-        $endpoint.serviceArea               = $ServiceArea
-        $endpoint.serviceAreaDisplayName    = $ServiceAreaDisplayName
-        $endpoint.protocol                  = $Protocol
-        $endpoint.uri                       = $Uri
-        $endpoint.tcpPort                   = $TcpPort
-        $endpoint.udpPort                   = $UdpPort
-        $endpoint.category                  = $Category
-        $endpoint.expressRoute              = $ExpressRoute
-        $endpoint.required                  = $Required
-        $endpoint.notes                     = $Notes
+        $endpoint = [EndpointSet]::new(
+            $ServiceArea,
+            $ServiceAreaDisplayName,
+            $Protocol,
+            $Uri,
+            $TcpPort,
+            $UdpPort,
+            $Category,
+            $ExpressRoute,
+            $Required,
+            $Notes
+        )
         
         $endpoints.Add($endpoint)
     }
@@ -756,18 +791,18 @@ function Merge-O365EndpointService {
                 $endpointsJSON = Get-Content $PathElement | ConvertFrom-Json    
             
                 foreach ($endpointJSON in $endpointsJSON) {
-                    $endpoint = New-Object EndpointSet
-
-                    $endpoint.serviceArea               = $endpointJSON.serviceArea
-                    $endpoint.serviceAreaDisplayName    = $endpointJSON.serviceAreaDisplayName
-                    $endpoint.protocol                  = $endpointJSON.protocol
-                    $endpoint.uri                       = $endpointJSON.uri
-                    $endpoint.tcpPort                   = $endpointJSON.tcpPort
-                    $endpoint.udpPort                   = $endpointJSON.udpPort
-                    $endpoint.category                  = $endpointJSON.category
-                    $endpoint.expressRoute              = $endpointJSON.expressRoute
-                    $endpoint.required                  = $endpointJSON.required
-                    $endpoint.notes                     = $endpointJSON.notes
+                    $endpoint = [EndpointSet]::new(
+                        $endpointJSON.serviceArea,
+                        $endpointJSON.serviceAreaDisplayName,
+                        $endpointJSON.protocol,
+                        $endpointJSON.uri,
+                        $endpointJSON.tcpPort,
+                        $endpointJSON.udpPort,
+                        $endpointJSON.category,
+                        $endpointJSON.expressRoute,
+                        $endpointJSON.required,
+                        $endpointJSON.notes
+                    )
             
                     $endpoints.Add($endpoint)
                 }
