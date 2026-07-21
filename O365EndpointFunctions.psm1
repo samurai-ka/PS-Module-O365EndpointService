@@ -82,6 +82,29 @@ class EndpointSet {
         ) -join [Environment]::NewLine
     }
 
+    # Returns all properties as a single CSV line, in declaration order. Every value is
+    # wrapped in double quotes; embedded double quotes are doubled ("" per RFC 4180).
+    [string] ToCSV() {
+        $values = @(
+            $this.serviceArea
+            $this.serviceAreaDisplayName
+            $this.protocol
+            $this.uri
+            $this.tcpPort
+            $this.udpPort
+            $this.category
+            $this.expressRoute
+            $this.required
+            $this.notes
+        )
+
+        $quoted = foreach ($value in $values) {
+            '"{0}"' -f ([string]$value).Replace('"', '""')
+        }
+
+        return $quoted -join ','
+    }
+
     # Internal helper that calls Invoke-RestMethod with a timeout, retries transient failures
     # and reports a clear, contextual error when a request cannot be completed. Hidden so it
     # is not part of the public surface of the class.
