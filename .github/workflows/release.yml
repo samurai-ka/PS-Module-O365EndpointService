@@ -41,7 +41,7 @@ jobs:
             exit 1
           fi
 
-      - name: Stage and publish module
+      - name: Publish module
         shell: pwsh
         env:
           PSGALLERY_API_KEY: ${{ secrets.PSGALLERY_API_KEY }}
@@ -50,18 +50,6 @@ jobs:
               throw "The PSGALLERY_API_KEY secret is not set on the 'production' environment."
           }
 
-          # Publish-Module requires the module to live in a folder named after the module.
-          # The repo root folder name differs, so stage the module files into a matching folder.
-          $staging = Join-Path $env:RUNNER_TEMP 'O365EndpointFunctions'
-          New-Item -ItemType Directory -Path $staging -Force | Out-Null
-          Copy-Item -Path `
-              './O365EndpointFunctions.psd1', `
-              './O365EndpointFunctions.psm1', `
-              './Public', `
-              './Private' `
-              -Destination $staging -Recurse -Force
-
-          # Fail early on a broken manifest.
-          Test-ModuleManifest -Path (Join-Path $staging 'O365EndpointFunctions.psd1') | Out-Null
-
-          Publish-Module -Path $staging -NuGetApiKey $env:PSGALLERY_API_KEY -Verbose
+          # The module lives in a folder named after the module, so publish it directly.
+          Test-ModuleManifest -Path ./O365EndpointFunctions/O365EndpointFunctions.psd1 | Out-Null
+          Publish-Module -Path ./O365EndpointFunctions -NuGetApiKey $env:PSGALLERY_API_KEY -Verbose

@@ -31,9 +31,9 @@ param(
     [string]$TenantName = 'contoso'
 )
 
-# Import the module from the repository root (this script lives in .\Examples).
+# Import the module (this script lives in .\Examples; the module is in .\O365EndpointFunctions).
 $repoRoot       = Split-Path -Parent $PSScriptRoot
-$moduleManifest = Join-Path -Path $repoRoot -ChildPath 'O365EndpointFunctions.psd1'
+$moduleManifest = Join-Path -Path $repoRoot -ChildPath 'O365EndpointFunctions\O365EndpointFunctions.psd1'
 Import-Module $moduleManifest -Force
 
 # The two example endpoint files sit next to this script.

@@ -10,12 +10,13 @@
 #   - Recommended metadata is present: Tags, ProjectUri, LicenseUri.
 #
 # Only the files that actually get published are analyzed (manifest, root module, Public/,
-# Private/) - the same set staged in .github/workflows/release.yml.
+# Private/) - the O365EndpointFunctions module folder that release.yml publishes.
 
 BeforeAll {
-    $script:ModuleRoot   = Split-Path -Parent $PSScriptRoot
+    $script:RepoRoot     = Split-Path -Parent $PSScriptRoot
+    $script:ModuleRoot   = Join-Path $RepoRoot 'O365EndpointFunctions'
     $script:ManifestPath = Join-Path $ModuleRoot 'O365EndpointFunctions.psd1'
-    $script:SettingsPath = Join-Path $ModuleRoot 'PSScriptAnalyzerSettings.psd1'
+    $script:SettingsPath = Join-Path $RepoRoot 'PSScriptAnalyzerSettings.psd1'
 
     if (-not (Get-Module -ListAvailable -Name PSScriptAnalyzer)) {
         Install-Module PSScriptAnalyzer -Force -Scope CurrentUser -ErrorAction Stop

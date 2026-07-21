@@ -5,7 +5,7 @@
 # mocked inside the module scope.
 
 BeforeAll {
-    Import-Module "$PSScriptRoot\..\O365EndpointFunctions.psd1" -Force
+    Import-Module "$PSScriptRoot\..\O365EndpointFunctions\O365EndpointFunctions.psd1" -Force
     $script:ModuleName = 'O365EndpointFunctions'
 }
 

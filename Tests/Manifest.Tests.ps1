@@ -2,12 +2,12 @@
 
 Describe 'Module manifest' {
     It 'has a valid manifest' {
-        $manifest = Test-ModuleManifest -Path "$PSScriptRoot\..\O365EndpointFunctions.psd1"
+        $manifest = Test-ModuleManifest -Path "$PSScriptRoot\..\O365EndpointFunctions\O365EndpointFunctions.psd1"
         $manifest.Name | Should -Be 'O365EndpointFunctions'
     }
 
     It 'exports expected functions' {
-        Import-Module "$PSScriptRoot\..\O365EndpointFunctions.psd1" -Force
+        Import-Module "$PSScriptRoot\..\O365EndpointFunctions\O365EndpointFunctions.psd1" -Force
         $commands = Get-Command -Module O365EndpointFunctions | Select-Object -ExpandProperty Name
 
         $commands | Should -Contain 'Invoke-O365EndpointService'

@@ -4,9 +4,9 @@ Microsoft is hosting a REST Service to get the newest and latest Uri for the Off
 This is a very early release. I haven't added this module to the PowerShell Gallery, so you cannot import this module with Import-Module. This is however on my roadmap for the future.
 
 ## Calling the REST service
-To use this module simply copy it somewhere on your disk and import it directly:
+To use this module simply copy it somewhere on your disk and import the module folder directly:
 
-        Import-Module O365EndpointFunctions.psm1
+        Import-Module .\O365EndpointFunctions
 
 All cmdlets in this module ship with comment based help, so you can get detailed usage information, parameters and examples at any time with
 
