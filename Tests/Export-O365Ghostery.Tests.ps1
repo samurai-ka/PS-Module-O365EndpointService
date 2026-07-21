@@ -6,8 +6,8 @@ BeforeAll {
     # helper: run the cmdlet over a list of uris and return the parsed policy object
     function Get-Policy {
         param([string[]]$Uris, [switch]$TrustedDomains, [switch]$Whitelist)
-        $input = $Uris | ForEach-Object { [pscustomobject]@{ uri = $_ } }
-        $json  = $input | Export-O365Ghostery -TrustedDomains:$TrustedDomains -Whitelist:$Whitelist
+        $objects = $Uris | ForEach-Object { [pscustomobject]@{ uri = $_ } }
+        $json    = $objects | Export-O365Ghostery -TrustedDomains:$TrustedDomains -Whitelist:$Whitelist
         return ($json | ConvertFrom-Json)
     }
 }

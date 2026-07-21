@@ -18,7 +18,7 @@ Function Test-UrlEndpoint  {
 
     Process  {
         if ($uri.StartsWith("*.")) {
-            "Url is a wildcard and will be skipped" | Write-Host
+            Write-Output "Url is a wildcard and will be skipped"
         }
         else {
             # Test-NetConnection -ComputerName $uri -Port $tcpPort -InformationLevel Detailed
@@ -26,7 +26,7 @@ Function Test-UrlEndpoint  {
             $client = [System.Net.Sockets.TcpClient]::new()
             $success = $client.ConnectAsync($Uri, $TcpPort).Wait(2000)
             $client.Close()
-            $success | Write-Host
+            Write-Output $success
 
         }
     }
