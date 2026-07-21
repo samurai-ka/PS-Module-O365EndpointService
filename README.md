@@ -1,12 +1,16 @@
 # Office 365 Endpoint Functions Module
 Microsoft is hosting a REST Service to get the newest and latest Uri for the Office 365 services. Working with this service in PowerShell however isn't as strait forward as you would expect. To be able to use the uri as a collection and be able to iterate thru them with foreach loops, I'm using this module to create a few helper cmdlets.
-## No PowerShell gallery support
-This is a very early release. I haven't added this module to the PowerShell Gallery, so you cannot import this module with Import-Module. This is however on my roadmap for the future.
 
-## Calling the REST service
-To use this module simply copy it somewhere on your disk and import the module folder directly:
+## Installation
+Install the module from the PowerShell Gallery:
+
+        Install-Module O365EndpointFunctions
+
+Alternatively, to run it from a local copy of this repository without installing, import the module folder directly:
 
         Import-Module .\O365EndpointFunctions
+
+## Calling the REST service
 
 All cmdlets in this module ship with comment based help, so you can get detailed usage information, parameters and examples at any time with
 
