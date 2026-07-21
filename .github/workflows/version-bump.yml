@@ -1,0 +1,79 @@
+name: Bump module version
+
+# On every push to master, increment the counter in ModuleVersion of the manifest, following the
+# format Major.Minor.YearMonth.Counter (YearMonth = yyMM). When the month changes, YearMonth
+# is updated and the counter is reset to 1.
+#
+# The bump commit is pushed with the default GITHUB_TOKEN (which does not retrigger workflows)
+# and carries a [skip ci] marker, so this workflow never triggers itself.
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: write
+
+# serialize bumps per branch so concurrent pushes don't race on the manifest
+concurrency:
+  group: version-bump-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    # skip branch deletions and our own automated bump commits
+    if: ${{ github.event.deleted != true && !contains(github.event.head_commit.message, '[skip ci]') }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Increment ModuleVersion counter
+        shell: pwsh
+        run: |
+          $manifest = 'O365EndpointFunctions.psd1'
+          $raw = Get-Content -LiteralPath $manifest -Raw
+
+          if ($raw -notmatch "ModuleVersion\s*=\s*'([^']+)'") {
+              throw "ModuleVersion not found in $manifest"
+          }
+          $current = $Matches[1]
+
+          $parts = $current.Split('.')
+          if ($parts.Count -ne 4) {
+              throw "ModuleVersion '$current' is not in the expected Major.Minor.YearMonth.Counter format"
+          }
+
+          $major        = $parts[0]
+          $minor        = $parts[1]
+          $oldYearMonth = $parts[2]
+          $counter      = [int]$parts[3]
+
+          $newYearMonth = (Get-Date).ToString('yyMM')
+          if ($oldYearMonth -eq $newYearMonth) {
+              $counter = $counter + 1        # same month -> increment
+          }
+          else {
+              $counter = 1                   # new month -> reset the counter
+          }
+
+          $newVersion = '{0}.{1}.{2}.{3}' -f $major, $minor, $newYearMonth, $counter
+          Write-Host "ModuleVersion: $current -> $newVersion"
+
+          $updated = $raw -replace "ModuleVersion\s*=\s*'[^']+'", "ModuleVersion = '$newVersion'"
+
+          # preserve the manifest's UTF-16 LE + BOM encoding
+          [System.IO.File]::WriteAllText((Resolve-Path $manifest), $updated, [System.Text.UnicodeEncoding]::new($false, $true))
+
+          "NEW_VERSION=$newVersion" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Commit and push
+        shell: bash
+        run: |
+          if git diff --quiet -- O365EndpointFunctions.psd1; then
+            echo "No version change to commit."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add O365EndpointFunctions.psd1
+          git commit -m "Bump module version to ${NEW_VERSION} [skip ci]"
+          git push

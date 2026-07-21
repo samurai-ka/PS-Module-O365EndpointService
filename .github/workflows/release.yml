@@ -6,35 +6,40 @@ name: Release module
 #
 # Release is manual only: it must be started explicitly from the Actions tab
 # (Run workflow). There is intentionally no automatic trigger.
+#
+# Tests are NOT run here - they run in ci.yml on every push. This workflow refuses to
+# publish unless the latest CI run on the selected branch concluded successfully.
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  actions: read
+
 jobs:
-  test:
-    name: Run tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Run Pester tests
-        shell: pwsh
-        run: |
-          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-          Install-Module Pester -MinimumVersion 5.0 -Force -Scope CurrentUser
-          $result = Invoke-Pester -Path ./Tests -Output Detailed -PassThru
-          if ($result.FailedCount -gt 0) {
-              throw "$($result.FailedCount) test(s) failed - aborting release."
-          }
-
   publish:
     name: Publish to PowerShell Gallery
-    needs: test
     runs-on: ubuntu-latest
     environment:
       name: production
       url: https://www.powershellgallery.com/packages/O365EndpointFunctions
     steps:
       - uses: actions/checkout@v4
+
+      - name: Require a successful CI run on this branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          branch="${{ github.ref_name }}"
+          conclusion=$(gh run list --workflow ci.yml --branch "$branch" --limit 20 \
+            --json conclusion,status \
+            --jq '[.[] | select(.status=="completed")][0].conclusion')
+          echo "Latest completed CI run on '$branch': ${conclusion:-<none>}"
+          if [ "$conclusion" != "success" ]; then
+            echo "::error::CI (ci.yml) has not succeeded on '$branch' (conclusion: ${conclusion:-none}). Aborting release."
+            exit 1
+          fi
 
       - name: Stage and publish module
         shell: pwsh
