@@ -1,15 +1,14 @@
 name: Development
 
-# Runs the Pester tests on every pull request targeting master (including PRs from forks)
-# and on every push to master. This workflow only validates - it never writes to master, so
-# it is fully compatible with branch protection / required pull requests.
+# Runs the Pester tests on every pull request targeting master (including PRs from forks).
+# It does NOT run on pushes to master: because master is protected and only accepts changes
+# through pull requests, the code has already been tested by the time it lands - re-running on
+# the merge push would be redundant. This workflow only validates; it never writes to master.
 #
 # Versioning follows SemVer (https://semver.org): Major.Minor.Patch. The version is the
 # ModuleVersion in the manifest and is updated through normal pull requests. Publishing to the
 # PowerShell Gallery and tagging the release is the separate, manual-only release.yml workflow.
 on:
-  push:
-    branches: [master]
   pull_request:
     branches: [master]
 
