@@ -1,7 +1,7 @@
 # Tests/Export-O365ProxyPacFile.Tests.ps1
 
 BeforeAll {
-    Import-Module "$PSScriptRoot\..\O365EndpointFunctions.psd1" -Force
+    Import-Module "$PSScriptRoot\..\O365EndpointFunctions\O365EndpointFunctions.psd1" -Force
 }
 
 Describe 'Export-O365ProxyPacFile' {

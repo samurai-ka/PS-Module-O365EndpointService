@@ -1,21 +1,24 @@
 name: Development
 
-# Runs on every push: first the Pester tests, then - only on master and only when the tests
-# passed - the module version counter is bumped (format Major.Minor.YearMonth.Counter, with
-# YearMonth = yyMM; the counter resets to 1 when the month changes).
+# Runs the Pester tests on every pull request targeting master (including PRs from forks)
+# and on every push to master. This workflow only validates - it never writes to master, so
+# it is fully compatible with branch protection / required pull requests.
 #
-# The automated bump commit is pushed with the default GITHUB_TOKEN (which does not retrigger
-# workflows) and carries a [skip ci] marker, so this workflow never triggers itself.
+# Versioning follows SemVer (https://semver.org): Major.Minor.Patch. The version is the
+# ModuleVersion in the manifest and is updated through normal pull requests. Publishing to the
+# PowerShell Gallery and tagging the release is the separate, manual-only release.yml workflow.
 on:
   push:
+    branches: [master]
+  pull_request:
+    branches: [master]
 
 permissions:
   contents: read
 
-# serialize runs per ref so concurrent pushes don't race on the manifest during the bump
 concurrency:
   group: development-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   test:
@@ -33,66 +36,3 @@ jobs:
           if ($result.FailedCount -gt 0) {
               throw "$($result.FailedCount) test(s) failed."
           }
-
-  bump:
-    name: Bump module version
-    needs: test                     # only runs if the tests succeeded
-    # only on master, skip branch deletions and our own automated bump commits
-    if: ${{ github.ref == 'refs/heads/master' && github.event.deleted != true && !contains(github.event.head_commit.message, '[skip ci]') }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write               # needed to push the bump commit
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Increment ModuleVersion counter
-        shell: pwsh
-        run: |
-          $manifest = 'O365EndpointFunctions.psd1'
-          $raw = Get-Content -LiteralPath $manifest -Raw
-
-          if ($raw -notmatch "ModuleVersion\s*=\s*'([^']+)'") {
-              throw "ModuleVersion not found in $manifest"
-          }
-          $current = $Matches[1]
-
-          $parts = $current.Split('.')
-          if ($parts.Count -ne 4) {
-              throw "ModuleVersion '$current' is not in the expected Major.Minor.YearMonth.Counter format"
-          }
-
-          $major        = $parts[0]
-          $minor        = $parts[1]
-          $oldYearMonth = $parts[2]
-          $counter      = [int]$parts[3]
-
-          $newYearMonth = (Get-Date).ToString('yyMM')
-          if ($oldYearMonth -eq $newYearMonth) {
-              $counter = $counter + 1        # same month -> increment
-          }
-          else {
-              $counter = 1                   # new month -> reset the counter
-          }
-
-          $newVersion = '{0}.{1}.{2}.{3}' -f $major, $minor, $newYearMonth, $counter
-          Write-Host "ModuleVersion: $current -> $newVersion"
-
-          $updated = $raw -replace "ModuleVersion\s*=\s*'[^']+'", "ModuleVersion = '$newVersion'"
-
-          # preserve the manifest's UTF-16 LE + BOM encoding
-          [System.IO.File]::WriteAllText((Resolve-Path $manifest), $updated, [System.Text.UnicodeEncoding]::new($false, $true))
-
-          "NEW_VERSION=$newVersion" | Out-File -FilePath $env:GITHUB_ENV -Append
-
-      - name: Commit and push
-        shell: bash
-        run: |
-          if git diff --quiet -- O365EndpointFunctions.psd1; then
-            echo "No version change to commit."
-            exit 0
-          fi
-          git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add O365EndpointFunctions.psd1
-          git commit -m "Bump module version to ${NEW_VERSION} [skip ci]"
-          git push

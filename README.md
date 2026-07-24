@@ -1,95 +1,159 @@
-# Office 365 Endpoint Functions Module
-Microsoft is hosting a REST Service to get the newest and latest Uri for the Office 365 services. Working with this service in PowerShell however isn't as strait forward as you would expect. To be able to use the uri as a collection and be able to iterate thru them with foreach loops, I'm using this module to create a few helper cmdlets.
-## No PowerShell gallery support
-This is a very early release. I haven't added this module to the PowerShell Gallery, so you cannot import this module with Import-Module. This is however on my roadmap for the future.
+# O365EndpointFunctions
 
-## Calling the REST service
-To use this module simply copy it somewhere on your disk and import it directly:
+[![Tests](https://img.shields.io/github/actions/workflow/status/samurai-ka/PS-Module-O365EndpointService/development.yml?branch=master&label=tests&logo=github)](https://github.com/samurai-ka/PS-Module-O365EndpointService/actions/workflows/development.yml)
+[![PowerShell](https://img.shields.io/badge/PowerShell-7%2B-5391FE?logo=powershell&logoColor=white)](https://learn.microsoft.com/powershell/)
 
-        Import-Module O365EndpointFunctions.psm1
+Microsoft publishes the IP addresses and URLs that Office 365 / Microsoft 365 depends on through the [Microsoft 365 IP Address and URL web service](https://learn.microsoft.com/microsoft-365/enterprise/microsoft-365-ip-web-service). Consuming that service directly in PowerShell is awkward: the data comes back as nested *endpoint sets*, ports are comma-separated strings, and you have to track the service version yourself to know when anything changed.
 
-All cmdlets in this module ship with comment based help, so you can get detailed usage information, parameters and examples at any time with
+**O365EndpointFunctions** turns that web service into flat, strongly-typed PowerShell objects that you can filter, sort and export like any other pipeline data. Every endpoint becomes a single object with properties such as `serviceArea`, `protocol`, `uri`, `tcpPort`, `category` and `required`. The module caches the published version, so it only downloads new data when Microsoft actually releases an update.
 
-        Get-Help Invoke-O365EndpointService -Full
+## What you can do with it
 
-After you have imported the module you can then call the REST service. This will return to you as a collection of uri you can process in powershell directly. You must enter the name of your Office 365 tenant
+- Keep firewall allow-lists and proxy bypass-lists for Office 365 traffic up to date.
+- Generate a proxy auto-config (PAC) file that routes Office 365 straight out (`DIRECT`).
+- Produce a [Ghostery](https://www.ghostery.com/enterprise-privacy-solutions/documentation/policy-reference) enterprise policy so tracker protection leaves Office 365 alone.
+- Merge the official endpoints with your own custom entries (for example Azure services) into one list.
 
-        Invoke-O365EndpointService -tenantName [Name of your tenant]
+It supports the **Worldwide**, **China** (21Vianet) and **US Government** (GCC High, DoD) cloud instances and requires **PowerShell 7 or later**.
 
-### Parameter
+## Installation
 
-* tenantName
-  
-  The name of your Office 365 tenant. This paramter is mandatory.
+Install the module from the PowerShell Gallery:
 
-* ForceLatest
+```powershell
+Install-Module O365EndpointFunctions -Repository PSGallery
+```
 
-  This switch will force the REST API to allways return the entire list of the latest uri.
+## Using the Service
 
-* IPv6
+List every cmdlet the module provides:
 
-  This switch will return the IPv6 addresses as well. As default only IPv4 will be returned.
+```powershell
+Get-Command -Module O365EndpointFunctions
+```
 
-## Samples
+All cmdlets ship with comment-based help, so you can look up detailed information, parameters and examples at any time:
 
-Return the complete list of all Uri including the IPv6 addresses
-        
-        Invoke-O365EndpointService -tenantName [YourTenantName] -ForceLatest -IPv6 | Format-Table -AutoSize
+```powershell
+Get-Help Invoke-O365EndpointService -Full
+```
 
-Return only the IP addresses for Exchange
+### Quickstart
 
-        Invoke-O365EndpointService -tenantName [YourTenantName] -ForceLatest | where{($_.serviceArea -eq "Exchange") -and ($_.protocol -eq "ip")} | Format-Table -AutoSize
+```powershell
+# Fetch the current Office 365 "Worldwide" endpoints into a variable
+$endpoints = Invoke-O365EndpointService -tenantName 'contoso' -ForceLatest
 
-# Exporting a Proxy Pacfile
+# Show them as a table
+$endpoints | Format-Table serviceArea, protocol, uri, tcpPort, udpPort, category -AutoSize
 
-You can use this module to create an Proxy Pacfile, even it isn't advised to use a proxy with the Office 365 Endpoints at all.
+# Filter to a single workload (service area) and only its URL endpoints
+$endpoints | Where-Object { $_.serviceArea -eq 'Exchange' -and $_.protocol -eq 'url' } | Format-Table -AutoSize
+```
 
-Use the following cmdlet to export a proxy pacfile. In this example you first get the endpoints and filter the result to select the Urls and the category Optimize or Allow only. These urls are piped to and select only unique entries which is then exported. The result is piped to the shell or you could pipe it into a Out-File cmdlet to save the result.
+Replace `contoso` with your own Office 365 tenant name — the service inserts it into the URLs that contain a tenant placeholder.
 
-        Invoke-O365EndpointService -tenantName [YourTenantName] -ForceLatest | where{($_.Protocol -eq "Url") -and (($_.Category -eq "Optimize") -or ($_.category -eq "Allow"))} | select uri -Unique | Export-O365ProxyPacFile
+### Parameters
 
-The cmdlet does not filter double entries. If you do not want the uri repeated you must filter them with
+- **tenantName** *(mandatory)* — your Office 365 tenant name, inserted into URLs that contain a tenant placeholder.
+- **Instance** — the cloud instance to query: `Worldwide` (default), `China`, `USGovDoD` or `USGovGCCHigh`.
+- **ServiceAreas** — limit the result to one or more workloads: `Common`, `Exchange`, `SharePoint`, `Skype`. `Common` is always included.
+- **IPv6** — also return IPv6 ranges. By default only IPv4 is returned.
+- **ForceLatest** — download the endpoints even when the cached version indicates the local data is already current.
 
-        select uri -Unique
+## Examples
 
-You can add the notes returned by the Invoke-O365EndpointService cmdlet with switch Comments. Just add the switch at the end of the cmdlet like this:
+Because every endpoint is a plain object, you shape the results with standard PowerShell. The snippets below assume the `$endpoints` variable from the [Quickstart](#quickstart). A larger, copy-and-paste collection lives in [Examples/Invoke-O365EndpointService.Examples.ps1](Examples/Invoke-O365EndpointService.Examples.ps1).
 
-        Export-O365ProxyPacFile -Comments
+Only URL endpoints:
 
-# Merging endpoints
+```powershell
+$endpoints | Where-Object { $_.protocol -eq 'url' } | Format-Table -AutoSize
+```
 
-There a plenty of other url and IP-addresses you might want to configure but are not returned from the Microsoft Rest API e.g. Azure Endpoints. An other use case are missing endpoints. In these cases you can merge your list of endpoints with the endpoints returned from the Rest API using the cmdlet
+Only the `Optimize` and `Allow` categories — the traffic you typically send direct or bypass the proxy for:
 
-        Merge-O365EndpointService
+```powershell
+$endpoints | Where-Object { $_.category -in 'Optimize', 'Allow' } | Format-Table -AutoSize
+```
 
-You can define your endpoints as one or more JSON files. These files can than be merged into a single list.
+Everything for a single workload:
 
-        Invoke-O365EndpointService -tenantName [YourTenantName] -ForceLatest | Merge-O365EndpointService -Path @(".\ExampleEndpoints1.json",".\ExampleEndpoints2.json") | Format-Table -AutoSize
+```powershell
+$endpoints | Where-Object { $_.serviceArea -eq 'Exchange' } | Format-Table -AutoSize
+```
 
-There is no JSON schema yet. So take care when creating your list.
+Unique URLs only, sorted:
 
-# Exporting a Ghostery policy
+```powershell
+$endpoints | Where-Object { $_.protocol -eq 'url' } | Select-Object -ExpandProperty uri -Unique | Sort-Object
+```
 
-If you use [Ghostery](https://www.ghostery.com/enterprise-privacy-solutions/documentation/policy-reference) in your enterprise you can export the endpoints as a Ghostery policy so that Office 365 traffic is not touched by the tracker protection. The cmdlet emits the policy as JSON to the pipeline, so you can pipe it directly into a Out-File cmdlet to save it as a policy file.
+Count endpoints per service area:
 
-        Export-O365Ghostery
+```powershell
+$endpoints | Group-Object serviceArea | Select-Object Count, Name | Sort-Object Count -Descending
+```
 
-There are two ways to allow the domains, controlled by two switches. Supply both to write both keys into a single policy.
+Query a different cloud instance, or limit the download to specific workloads:
 
-* TrustedDomains
+```powershell
+Invoke-O365EndpointService -tenantName 'contoso' -Instance USGovGCCHigh -ForceLatest
+Invoke-O365EndpointService -tenantName 'contoso' -ServiceAreas Exchange, SharePoint -ForceLatest
+```
 
-  Exports the urls as the Ghostery `trustedDomains` array. Ghostery pauses its protection for these domains and automatically includes their subdomains. This is the default when neither switch is given.
+## Exporting a proxy PAC file
 
-* Whitelist
+You can build a proxy auto-config (PAC) "direct" block for Office 365 URLs. Filter to the `Optimize`/`Allow` URLs, reduce them to unique entries and export:
 
-  Exports the urls as `customFilters` allowlist exception rules of the form `@@||domain^`. Ghostery has no dedicated exceptions key, so allowlisting is expressed through customFilters.
+```powershell
+$endpoints |
+    Where-Object { $_.protocol -eq 'url' -and $_.category -in 'Optimize', 'Allow' } |
+    Select-Object uri -Unique |
+    Export-O365ProxyPacFile
+```
 
-Each url is normalised before it is written: the scheme and path are removed and a leading wildcard (`*.`) is stripped, because Ghostery matches subdomains on its own. Duplicate domains are removed automatically.
+The result is written to the pipeline, so you can redirect it to a file. Add `-Comments` to annotate each line with the service area, category and notes:
 
-Get the endpoints, filter them to the urls and export them as trusted domains into a policy file:
+```powershell
+$endpoints |
+    Where-Object { $_.protocol -eq 'url' -and $_.category -in 'Optimize', 'Allow' } |
+    Export-O365ProxyPacFile -Comments | Out-File .\o365.pac -Encoding ascii
+```
 
-        Invoke-O365EndpointService -tenantName [YourTenantName] -ForceLatest | where{$_.Protocol -eq "Url"} | Export-O365Ghostery -TrustedDomains | Out-File .\ghostery-policy.json -Encoding utf8
+`Export-O365ProxyPacFile` does not remove duplicate URLs itself, so filter with `Select-Object uri -Unique` first if you want each host only once.
 
-Export the same urls as allowlist exception rules instead:
+## Exporting a Ghostery policy
 
-        Invoke-O365EndpointService -tenantName [YourTenantName] -ForceLatest | where{$_.Protocol -eq "Url"} | Export-O365Ghostery -Whitelist
+If you use [Ghostery](https://www.ghostery.com/enterprise-privacy-solutions/documentation/policy-reference) in your enterprise, you can export the endpoints as a Ghostery policy so that Office 365 traffic is not touched by the tracker protection. The policy is emitted as JSON to the pipeline, ready to be saved to a policy file.
+
+Two switches control how the domains are allowed (supply both to write both keys into one policy):
+
+- **-TrustedDomains** — writes the `trustedDomains` array. Ghostery pauses its protection for these domains and automatically includes their subdomains. This is the default when neither switch is given.
+- **-Whitelist** — writes `customFilters` allowlist exception rules of the form `@@||domain^`. Ghostery has no dedicated exceptions key, so allowlisting is expressed through `customFilters`.
+
+Each URL is normalised before it is written (the scheme, any path and a leading `*.` wildcard are stripped, because Ghostery matches subdomains on its own) and duplicate domains are removed automatically.
+
+Export the URLs as trusted domains into a policy file:
+
+```powershell
+$endpoints | Where-Object { $_.protocol -eq 'url' } | Export-O365Ghostery -TrustedDomains | Out-File .\ghostery-policy.json -Encoding utf8
+```
+
+Export the same URLs as allowlist exception rules instead:
+
+```powershell
+$endpoints | Where-Object { $_.protocol -eq 'url' } | Export-O365Ghostery -Whitelist
+```
+
+## Merging endpoints
+
+There are plenty of other URLs and IP ranges you may want to configure that the Microsoft web service does not return (for example Azure endpoints), or endpoints you feel are missing. `Merge-O365EndpointService` combines the live endpoints with your own entries stored in one or more JSON files:
+
+```powershell
+$endpoints |
+    Merge-O365EndpointService -Path .\Examples\ExampleEndpoints1.json, .\Examples\ExampleEndpoints2.json |
+    Format-Table serviceArea, protocol, uri, tcpPort -AutoSize
+```
+
+See the [Examples/](Examples/) folder for the JSON format. There is no formal JSON schema yet, so take care when creating your own files.

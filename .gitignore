@@ -25,5 +25,7 @@ coverage*.xml
 # PowerShell transcripts
 PowerShell_transcript.*.txt
 
+# ---------------------------------------------------------------------------
 # Local module cache / temp
+# ---------------------------------------------------------------------------
 *.tmp

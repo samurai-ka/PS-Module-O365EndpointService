@@ -9,11 +9,15 @@ name: Release module
 #
 # Tests are NOT run here - they run in development.yml on every push. This workflow refuses
 # to publish unless the latest development.yml run on the selected branch concluded successfully.
+#
+# The version is the ModuleVersion in the manifest (updated via normal pull requests). After a
+# successful publish this workflow tags the release as v<version> (a tag push, which does not
+# touch the protected master branch).
 on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write   # needed to push the release tag
   actions: read
 
 jobs:
@@ -41,7 +45,7 @@ jobs:
             exit 1
           fi
 
-      - name: Stage and publish module
+      - name: Publish module
         shell: pwsh
         env:
           PSGALLERY_API_KEY: ${{ secrets.PSGALLERY_API_KEY }}
@@ -50,18 +54,24 @@ jobs:
               throw "The PSGALLERY_API_KEY secret is not set on the 'production' environment."
           }
 
-          # Publish-Module requires the module to live in a folder named after the module.
-          # The repo root folder name differs, so stage the module files into a matching folder.
-          $staging = Join-Path $env:RUNNER_TEMP 'O365EndpointFunctions'
-          New-Item -ItemType Directory -Path $staging -Force | Out-Null
-          Copy-Item -Path `
-              './O365EndpointFunctions.psd1', `
-              './O365EndpointFunctions.psm1', `
-              './Public', `
-              './Private' `
-              -Destination $staging -Recurse -Force
+          # The module lives in a folder named after the module, so publish it directly.
+          Test-ModuleManifest -Path ./O365EndpointFunctions/O365EndpointFunctions.psd1 | Out-Null
+          Publish-Module -Path ./O365EndpointFunctions -NuGetApiKey $env:PSGALLERY_API_KEY -Verbose
 
-          # Fail early on a broken manifest.
-          Test-ModuleManifest -Path (Join-Path $staging 'O365EndpointFunctions.psd1') | Out-Null
+      - name: Tag the release
+        shell: pwsh
+        run: |
+          $version = (Test-ModuleManifest -Path ./O365EndpointFunctions/O365EndpointFunctions.psd1).Version.ToString()
+          $tag = "v$version"
 
-          Publish-Module -Path $staging -NuGetApiKey $env:PSGALLERY_API_KEY -Verbose
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if (git ls-remote --tags origin "refs/tags/$tag") {
+              Write-Host "Tag $tag already exists - skipping."
+          }
+          else {
+              git tag -a $tag -m "Release $version"
+              git push origin $tag
+              Write-Host "Tagged release $tag."
+          }

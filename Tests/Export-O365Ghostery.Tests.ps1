@@ -1,7 +1,7 @@
 # Tests/Export-O365Ghostery.Tests.ps1
 
 BeforeAll {
-    Import-Module "$PSScriptRoot\..\O365EndpointFunctions.psd1" -Force
+    Import-Module "$PSScriptRoot\..\O365EndpointFunctions\O365EndpointFunctions.psd1" -Force
 
     # helper: run the cmdlet over a list of uris and return the parsed policy object
     function Get-Policy {
