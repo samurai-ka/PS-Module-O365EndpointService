@@ -2,6 +2,11 @@
 
 Using the changelog schema https://keepachangelog.com/en/0.3.0/
 
+## [1.2.1] - 2026-07-24
+### Module
+#### Changed
+* Adopted Semantic Versioning ([semver.org](https://semver.org)). The version format is now `Major.Minor.Patch`; the CI version bump advances the patch only. Bump major/minor manually in the manifest.
+
 ## [1.1.2607.2] - 2026-07-20
 ### Module
 #### Fixed

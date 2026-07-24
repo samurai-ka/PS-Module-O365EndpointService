@@ -66,9 +66,9 @@ Describe 'PowerShell Gallery publishing requirements' {
             $Manifest.Description | Should -Not -BeNullOrEmpty
         }
 
-        It 'declares a valid ModuleVersion (required)' {
+        It 'declares a valid SemVer ModuleVersion (Major.Minor.Patch)' {
             $Manifest.ModuleVersion | Should -Not -BeNullOrEmpty
-            { [version]$Manifest.ModuleVersion } | Should -Not -Throw
+            $Manifest.ModuleVersion | Should -Match '^\d+\.\d+\.\d+$'
         }
     }
 

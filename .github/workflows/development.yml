@@ -1,8 +1,9 @@
 name: Development
 
 # Runs on every push: first the Pester tests, then - only on master and only when the tests
-# passed - the module version counter is bumped (format Major.Minor.YearMonth.Counter, with
-# YearMonth = yyMM; the counter resets to 1 when the month changes).
+# passed - the module version PATCH is bumped. Versions follow SemVer (https://semver.org):
+# Major.Minor.Patch. Bump major/minor manually in the manifest; this workflow only advances
+# the patch.
 #
 # The automated bump commit is pushed with the default GITHUB_TOKEN (which does not retrigger
 # workflows) and carries a [skip ci] marker, so this workflow never triggers itself.
@@ -45,7 +46,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Increment ModuleVersion counter
+      - name: Increment ModuleVersion patch
         shell: pwsh
         run: |
           $manifest = 'O365EndpointFunctions/O365EndpointFunctions.psd1'
@@ -56,25 +57,18 @@ jobs:
           }
           $current = $Matches[1]
 
+          # SemVer Major.Minor.Patch (https://semver.org). This workflow only bumps the patch;
+          # bump major/minor manually in the manifest.
           $parts = $current.Split('.')
-          if ($parts.Count -ne 4) {
-              throw "ModuleVersion '$current' is not in the expected Major.Minor.YearMonth.Counter format"
+          if ($parts.Count -ne 3) {
+              throw "ModuleVersion '$current' is not in the expected SemVer Major.Minor.Patch format"
           }
 
-          $major        = $parts[0]
-          $minor        = $parts[1]
-          $oldYearMonth = $parts[2]
-          $counter      = [int]$parts[3]
+          $major = [int]$parts[0]
+          $minor = [int]$parts[1]
+          $patch = [int]$parts[2]
 
-          $newYearMonth = (Get-Date).ToString('yyMM')
-          if ($oldYearMonth -eq $newYearMonth) {
-              $counter = $counter + 1        # same month -> increment
-          }
-          else {
-              $counter = 1                   # new month -> reset the counter
-          }
-
-          $newVersion = '{0}.{1}.{2}.{3}' -f $major, $minor, $newYearMonth, $counter
+          $newVersion = '{0}.{1}.{2}' -f $major, $minor, ($patch + 1)
           Write-Host "ModuleVersion: $current -> $newVersion"
 
           $updated = $raw -replace "ModuleVersion\s*=\s*'[^']+'", "ModuleVersion = '$newVersion'"

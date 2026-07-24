@@ -60,9 +60,10 @@ PSScriptAnalyzerSettings.psd1     # analyzer config (repo root, not shipped)
   Pester suite all pass.
 
 ## Versioning & CI/CD
-- Version format is `Major.Minor.YearMonth.Counter` (`YearMonth = yyMM`).
+- Versions follow **SemVer** (https://semver.org): `Major.Minor.Patch`. Bump major/minor
+  manually in the manifest; CI only advances the patch.
 - `development.yml` runs on every push: Pester tests, then — only on `master` and only
-  if tests pass — bumps the `ModuleVersion` counter and pushes a `[skip ci]` commit.
+  if tests pass — bumps the `ModuleVersion` **patch** and pushes a `[skip ci]` commit.
 - `release.yml` is **manual only** (`workflow_dispatch`): publishes to the PowerShell
   Gallery via the `production` environment, gated on a successful `development.yml` run.
   Needs the `PSGALLERY_API_KEY` secret on the `production` environment.
