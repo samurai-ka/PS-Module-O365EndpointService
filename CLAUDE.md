@@ -60,13 +60,16 @@ PSScriptAnalyzerSettings.psd1     # analyzer config (repo root, not shipped)
   Pester suite all pass.
 
 ## Versioning & CI/CD
-- Versions follow **SemVer** (https://semver.org): `Major.Minor.Patch`. Bump major/minor
-  manually in the manifest; CI only advances the patch.
-- `development.yml` runs on every push: Pester tests, then — only on `master` and only
-  if tests pass — bumps the `ModuleVersion` **patch** and pushes a `[skip ci]` commit.
-- `release.yml` is **manual only** (`workflow_dispatch`): publishes to the PowerShell
-  Gallery via the `production` environment, gated on a successful `development.yml` run.
-  Needs the `PSGALLERY_API_KEY` secret on the `production` environment.
+- Versions follow **SemVer** (https://semver.org): `Major.Minor.Patch`. The version is the
+  `ModuleVersion` in the manifest and is updated through normal pull requests — there is **no
+  automated bump**, and CI never writes to `master` (so it is branch-protection compatible).
+- `development.yml` runs the Pester tests on every pull request to `master` and every push
+  to `master`. It only validates; it never modifies the repo.
+- `release.yml` is **manual only** (`workflow_dispatch`): gated on a successful
+  `development.yml` run, it publishes to the PowerShell Gallery via the `production`
+  environment (needs the `PSGALLERY_API_KEY` secret) and tags the release `v<version>`.
+- **`master` is protected**: all changes go through pull requests, and the `Run tests` check
+  must pass before merging.
 
 ## Working conventions
 - **Git**: don't commit or push unless asked. Branch off `master` first. End commit
